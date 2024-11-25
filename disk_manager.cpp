@@ -49,21 +49,14 @@ void writeBlock(size_t blockNumber, const std::string& data, const std::string& 
     }
 
     // Validate block number
-    size_t maxBlocks = 1024 * 1024 / BLOCK_SIZE; // Disk size (1 MB) / block size (4 KB)
-    if (blockNumber >= maxBlocks) {
-        throw std::runtime_error("Invalid block number.");
-    }
+    validateBlockNumber(blockNumber);
 
     std::fstream diskFile(diskName, std::ios::in | std::ios::out | std::ios::binary);
-    if (!diskFile) {
-        throw std::runtime_error("Failed to open disk file.");
-    }
 
     size_t offset = blockNumber * BLOCK_SIZE;
-    diskFile.seekp(offset, std::ios::beg);
-    if (!diskFile) {
-        throw std::runtime_error("Failed to seek to block position.");
-    }
+
+    // Validate disk file
+    validateDiskFile(diskFile, offset);
 
     // Write data to the block
     diskFile.write(data.data(), data.size());
@@ -78,23 +71,15 @@ void writeBlock(size_t blockNumber, const std::string& data, const std::string& 
 
 
 std::string readBlock(size_t blockNumber, const std::string& diskName) {
-    std::fstream diskFile(diskName, std::ios::in | std::ios::binary);
-    if (!diskFile) {
-        throw std::runtime_error("Failed to open disk file");
-    }
-
     // Validate block number
-    size_t maxBlocks = 1024 * 1024 / BLOCK_SIZE; // Disk size (1 MB) / block size (4 KB)
-    if (blockNumber >= maxBlocks) {
-        throw std::runtime_error("Invalid block number.");
-    }
+    validateBlockNumber(blockNumber);
+
+    std::fstream diskFile(diskName, std::ios::in | std::ios::binary);
 
     size_t offset = blockNumber * BLOCK_SIZE;
 
-    diskFile.seekg(offset, std::ios::beg);
-    if (!diskFile) {
-        throw std::runtime_error("Failed to seek to block position.");
-    }
+    // Validate disk file
+    validateDiskFile(diskFile, offset);
 
     std::vector<char> buffer(BLOCK_SIZE, 0); // Ensure full block is initialized
     diskFile.read(buffer.data(), BLOCK_SIZE);
@@ -104,73 +89,71 @@ std::string readBlock(size_t blockNumber, const std::string& diskName) {
     return std::string(buffer.begin(), buffer.end());
 }
 
+void deleteBlock(size_t blockIndex, const std::string& diskName) {
+    // Open the disk file
+    std::fstream diskFile(diskName, std::ios::in | std::ios::out | std::ios::binary);
+    if (!diskFile.is_open()) {
+        throw std::runtime_error("Failed to open disk file.");
+    }
+
+    // Check the disk file size
+    diskFile.seekg(0, std::ios::end);
+    size_t fileSize = diskFile.tellg();
+
+    // Ensure the block index is valid
+    if (blockIndex * BLOCK_SIZE >= fileSize) {
+        throw std::out_of_range("Invalid block number.");
+    }
+
+    // Check for file corruption (simple integrity check)
+    if (fileSize % BLOCK_SIZE != 0) {
+        throw std::runtime_error("Corrupted disk file: file size is not a multiple of block size.");
+    }
+
+    // Create a buffer of zeros
+    std::vector<char> zeroBuffer(BLOCK_SIZE, 0);
+
+    // Seek to the block position
+    diskFile.seekp(blockIndex * BLOCK_SIZE, std::ios::beg);
+
+    // Overwrite the block with zeros
+    diskFile.write(zeroBuffer.data(), BLOCK_SIZE);
+    if (!diskFile.good()) {
+        throw std::runtime_error("Failed to write to the disk file.");
+    }
+
+    // Close the file
+    diskFile.close();
+}
 
 
-void testWriteReadEdgeCases() {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
-    const size_t blockSize = BLOCK_SIZE;
 
-    try {
-        initializeDisk(diskName, diskSize);
-
-        // Edge Case 1: Data larger than block size
-        try {
-            std::string largeData(blockSize + 100, 'A'); // 100 bytes too large
-            writeBlock(0, largeData, diskName);
-        } catch (const std::exception& e) {
-            std::cout << "Caught expected error: " << e.what() << std::endl;
-        }
-
-        // Edge Case 2: Empty data
-        writeBlock(1, "", diskName);
-        std::string emptyData = readBlock(1, diskName);
-        std::cout << "Empty block data (first 16 bytes): ";
-        for (size_t i = 0; i < 16; ++i) {
-            std::cout << (int)emptyData[i] << " ";
-        }
-        std::cout << std::endl;
-
-        // Edge Case 3: Invalid block number
-        try {
-            writeBlock(diskSize / blockSize, "Out of range", diskName); // Invalid block
-        } catch (const std::exception& e) {
-            std::cout << "Caught expected error: " << e.what() << std::endl;
-        }
-
-        // Edge Case 4: Missing disk file
-        try {
-            readBlock(0, "missing_disk.dat"); // Non-existent file
-        } catch (const std::exception& e) {
-            std::cout << "Caught expected error: " << e.what() << std::endl;
-        }
-
-        // Edge Case 5: Reading unwritten block
-        std::string unwrittenData = readBlock(2, diskName);
-        std::cout << "Unwritten block data (first 16 bytes): ";
-        for (size_t i = 0; i < 16; ++i) {
-            std::cout << (int)unwrittenData[i] << " ";
-        }
-        std::cout << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "Unexpected error during edge case testing: " << e.what() << std::endl;
+void validateBlockNumber(size_t blockNumber) {
+    size_t maxBlocks = 1024 * 1024 / BLOCK_SIZE; // Disk size (1 MB) / block size (4 KB)
+    if (blockNumber >= maxBlocks || blockNumber < 0) {
+        throw std::out_of_range("Invalid block number.");
     }
 }
+
+void validateDiskFile(std::fstream& diskFile, size_t offset) {
+    if (!diskFile) {
+        throw std::runtime_error("Failed to open disk file");
+    }
+
+    diskFile.seekg(offset, std::ios::beg);
+    if (!diskFile) {
+        throw std::runtime_error("Failed to seek to block position.");
+    }
+}
+
 
 #ifndef TESTING
 int main() {
     try {
-        initializeDisk("virtual_disk.dat", 1024 * 1024); // 1 MB disk
-        std::cout << "Disk initialization complete." << std::endl;
-
-        // Write some data to block 0
-        writeBlock(0, "Hello, Block 0!", "virtual_disk.dat");
-
-        std::string data = readBlock(0, "virtual_disk.dat");
-        std::cout << "Read from block 0: " << data << std::endl;
-
-        testWriteReadEdgeCases();
-    } catch (const std::exception& e) {
+        std::string diskName = "virtual_disk.dat"; // Replace with your disk file name
+        size_t blockIndex = 2; // Example block index to delete
+        deleteBlock(blockIndex, diskName);
+    } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
     return 0;
