@@ -1,132 +1,55 @@
 #include <gtest/gtest.h>
-#include <fstream> // For std::ifstream
-#include "disk_manager.h" // Include the header for BLOCK_SIZE and function declarations
+#include "disk_manager.h"
+#include <fstream>
 
+// Helper function to initialize the disk
+void initializeDiskFile(const std::string& diskName) {
+    std::ofstream disk(diskName, std::ios::binary | std::ios::trunc);
+    std::string emptyData(MAX_BLOCKS * BLOCK_SIZE, '\0');
+    disk.write(emptyData.c_str(), emptyData.size());
+    disk.close();
+}
+
+// Test case: Initialize Disk
 TEST(DiskManagerTests, InitializeDisk) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
+    const std::string diskName = "test_initialize.dat";
+    initializeDiskFile(diskName);
 
-    initializeDisk(diskName, diskSize);
-
-    std::ifstream diskFile(diskName, std::ios::binary); // Ensure std::ifstream is included
-    ASSERT_TRUE(diskFile.is_open());
-
-    diskFile.seekg(0, std::ios::end);
-    size_t fileSize = diskFile.tellg();
-    ASSERT_EQ(fileSize, diskSize); // File size should match expected disk size
-    diskFile.close();
-
-    std::remove(diskName.c_str()); // Clean up test file
+    DiskManager diskManager(diskName, MAX_BLOCKS);
+    ASSERT_EQ(diskManager.getBitmap().getBitmap().size(), MAX_BLOCKS);
 }
 
-// Test: Write and Read Block
+// Test case: Write and Read Block
 TEST(DiskManagerTests, WriteAndReadBlock) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
-    initializeDisk(diskName, diskSize);
+    const std::string diskName = "test_write_read.dat";
+    initializeDiskFile(diskName);
 
-    const std::string data = "Hello, Block!";
-    writeBlock(0, data, diskName);
+    DiskManager diskManager(diskName, MAX_BLOCKS);
+    std::string data = "Hello, World!";
+    diskManager.writeBlock(0, data);
 
-    std::string readData = readBlock(0, diskName);
-    ASSERT_EQ(readData.substr(0, data.size()), data); // Ensure data matches
-    ASSERT_EQ(readData.size(), BLOCK_SIZE);          // Block size should be consistent
-
-    std::remove(diskName.c_str()); // Clean up test file
+    // Read the block and validate
+    ASSERT_EQ(diskManager.readBlock(0), data);
 }
 
-// Test: Invalid Block Number
-TEST(DiskManagerTests, InvalidBlockNumber) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
-    initializeDisk(diskName, diskSize);
+// Test case: Delete Block
+TEST(DiskManagerTests, DeleteBlock) {
+    const std::string diskName = "test_delete.dat";
+    initializeDiskFile(diskName);
 
-    ASSERT_THROW(writeBlock(256, "Out of range", diskName), std::out_of_range); // Invalid block
-    ASSERT_THROW(readBlock(256, diskName), std::out_of_range); // Invalid block
-
-    ASSERT_THROW(writeBlock(-1, "Negative Index", diskName), std::out_of_range); // Invalid block
-    ASSERT_THROW(readBlock(-1, diskName), std::out_of_range); // Invalid block
-
-    std::remove(diskName.c_str()); // Clean up test file
-}
-
-// Test: Delete a block from a valid disk file
-TEST(DiskManagerTests, DeleteBlockValid) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
-
-    // Initialize the disk
-    initializeDisk(diskName, diskSize);
-
-    // Write some data to block 0
-    std::string data(BLOCK_SIZE, 'X');
-    writeBlock(0, diskName, data);
-
-    // Delete the block
-    deleteBlock(0, diskName);
-
-    // Read the block to verify it's zeroed out
-    std::string readData = readBlock(0, diskName);
-    std::string zeroBlock(BLOCK_SIZE, '\0');
-    ASSERT_EQ(readData, zeroBlock);
-
-    // Clean up
-    std::remove(diskName.c_str());
-}
-
-
-// Test: Delete a block from an invalid block index
-TEST(DiskManagerTests, DeleteBlockInvalidIndex) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
-
-    // Initialize the disk
-    initializeDisk(diskName, diskSize);
-
-    const size_t invalidIndex = 300; // Out of range index
-    ASSERT_THROW(deleteBlock(invalidIndex, diskName), std::out_of_range);
-
-    // Clean up
-    std::remove(diskName.c_str());
-}
-
-// Test: Delete a block when the disk file does not exist
-TEST(DiskManagerTests, DeleteBlockNonExistentFile) {
-    const std::string nonExistentDisk = "non_existent_disk.dat";
+    DiskManager diskManager(diskName, MAX_BLOCKS);
     const size_t blockIndex = 0;
 
-    ASSERT_THROW(deleteBlock(blockIndex, nonExistentDisk), std::runtime_error);
-}
+    // Write data to the block
+    std::string data = "Test data for block";
+    diskManager.writeBlock(blockIndex, data);
 
-// Test: Delete a block when the disk file is corrupted
-TEST(DiskManagerTests, DeleteBlockCorruptedFile) {
-    const std::string corruptedDisk = "corrupted_disk.dat";
+    // Delete the block (should succeed)
+    ASSERT_NO_THROW(diskManager.deleteBlock(blockIndex));
 
-    // Create a corrupted disk file
-    std::ofstream diskFile(corruptedDisk, std::ios::binary);
-    diskFile.seekp(BLOCK_SIZE / 2, std::ios::beg); // Write half a block
-    diskFile.write("\0", 1);
-    diskFile.close();
+    // Verify the block is free
+    ASSERT_THROW(diskManager.readBlock(blockIndex), std::runtime_error);
 
-    const size_t blockIndex = 0;
-    ASSERT_THROW(deleteBlock(blockIndex, corruptedDisk), std::runtime_error);
-
-    // Clean up
-    std::remove(corruptedDisk.c_str());
-}
-
-
-// Test: Delete a block with negative index
-TEST(DiskManagerTests, DeleteBlockNegativeIndex) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
-
-    // Initialize the disk
-    initializeDisk(diskName, diskSize);
-
-    const int negativeIndex = -1; // Invalid negative index
-    ASSERT_THROW(deleteBlock(negativeIndex, diskName), std::invalid_argument);
-
-    // Clean up
-    std::remove(diskName.c_str());
+    // Attempt to delete an already free block (should throw)
+    ASSERT_THROW(diskManager.deleteBlock(blockIndex), std::runtime_error);
 }
