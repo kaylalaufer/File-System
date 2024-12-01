@@ -95,10 +95,16 @@ void DiskManager::deleteBlock(size_t blockIndex) {
         throw std::runtime_error("Block is already free");
     }
 
-    // Open the disk file
+    // Ensure the disk file exists
     std::fstream disk(diskName, std::ios::in | std::ios::out | std::ios::binary);
     if (!disk) {
-        throw std::runtime_error("Failed to open disk file for deleting");
+        // Create the disk file if it doesn't exist
+        std::ofstream createDisk(diskName, std::ios::binary | std::ios::trunc);
+        createDisk.close();
+        disk.open(diskName, std::ios::in | std::ios::out | std::ios::binary);
+        if (!disk) {
+            throw std::runtime_error("Failed to open disk file for deleting");
+        }
     }
 
     // Overwrite the block with empty data

@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <regex>
+#include <sstream>
 
 // Enum for File Type
 enum class FileType {
@@ -19,6 +21,10 @@ struct FileEntry {
     size_t size;
     std::vector<size_t> blockIndices;
 
+    // Default constructor
+    FileEntry() : name(""), type(FileType::File), size(0), blockIndices() {}
+
+    // Custom constructor
     FileEntry(std::string name, FileType type, size_t size, const std::vector<size_t>& blocks);
 };
 
@@ -37,17 +43,23 @@ private:
 // FileManager: Handles files and directories
 class FileManager {
 public:
-    FileManager(DiskManager& diskManager);
+    explicit FileManager(DiskManager& diskManager);
 
     void createFile(const std::string& path, size_t size);
     void createDirectory(const std::string& path);
-    std::vector<std::string> listDirectory(const std::string& path);
+    void deleteFile(const std::string& path);
+    void deleteDirectory(const std::string& path, bool recursive = false);
+    std::vector<std::string> listDirectory(const std::string& path) const;
+    const FileEntry* getMetadata(const std::string& path) const;
 
 private:
     DiskManager& diskManager;
     FileTable fileTable;
 
-    void validatePath(const std::string& path) const;
+    bool isValidName(const std::string& name) const;
+    std::vector<std::string> tokenizePath(const std::string& path) const;
+    std::string resolvePath(const std::string& path) const;
+    const FileEntry* findEntry(const std::string& path) const;
 };
 
 #endif // FILE_MANAGER_H
