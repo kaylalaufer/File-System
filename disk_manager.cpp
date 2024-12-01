@@ -1,11 +1,7 @@
 #include "disk_manager.h"
 #include <fstream>
 #include <stdexcept>
-#include <utility>
-
-// FileEntry Implementation
-FileEntry::FileEntry(std::string name, FileType type, size_t size, const std::vector<size_t>& blocks)
-    : name(std::move(name)), type(type), size(size), blockIndices(blocks) {}
+#include <cstring>
 
 // Bitmap Implementation
 Bitmap::Bitmap(size_t numBlocks) : bitmap(numBlocks, true) {}
@@ -27,27 +23,6 @@ void Bitmap::setFree(size_t blockIndex) {
 
 const std::vector<bool>& Bitmap::getBitmap() const {
     return bitmap;
-}
-
-// FileTable Implementation
-void FileTable::addEntry(const FileEntry& entry) {
-    if (entries.find(entry.name) != entries.end())
-        throw std::runtime_error("File entry already exists");
-    entries[entry.name] = entry;
-}
-
-bool FileTable::removeEntry(const std::string& name) {
-    return entries.erase(name) > 0;
-}
-
-const FileEntry* FileTable::getEntry(const std::string& name) const {
-    auto it = entries.find(name);
-    if (it == entries.end()) return nullptr;
-    return &it->second;
-}
-
-const std::unordered_map<std::string, FileEntry>& FileTable::getEntries() const {
-    return entries;
 }
 
 // DiskManager Implementation
@@ -136,18 +111,20 @@ void DiskManager::deleteBlock(size_t blockIndex) {
     bitmap.setFree(blockIndex);
 }
 
-void DiskManager::saveToDisk() const {
-    // Serialization logic for the file table and bitmap
+size_t DiskManager::allocateBlock() {
+    for (size_t i = 0; i < numBlocks; ++i) {
+        if (bitmap.isFree(i)) {
+            bitmap.setOccupied(i);
+            return i;
+        }
+    }
+    throw std::runtime_error("No free blocks available");
 }
 
-void DiskManager::loadFromDisk() {
-    // Deserialization logic for the file table and bitmap
+void DiskManager::setBlockFree(size_t blockIndex) {
+    bitmap.setFree(blockIndex);
 }
 
 const Bitmap& DiskManager::getBitmap() const {
     return bitmap;
-}
-
-FileTable& DiskManager::getFileTable() {
-    return fileTable;
 }
