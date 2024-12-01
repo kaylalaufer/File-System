@@ -9,6 +9,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/disk_manager.cpp" "CMakeFiles/runTests.dir/disk_manager.cpp.o" "gcc" "CMakeFiles/runTests.dir/disk_manager.cpp.o.d"
+  "/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/file_manager.cpp" "CMakeFiles/runTests.dir/file_manager.cpp.o" "gcc" "CMakeFiles/runTests.dir/file_manager.cpp.o.d"
   "/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/test_main.cpp" "CMakeFiles/runTests.dir/test_main.cpp.o" "gcc" "CMakeFiles/runTests.dir/test_main.cpp.o.d"
   )
 
