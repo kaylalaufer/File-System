@@ -164,3 +164,67 @@ std::vector<std::string> FileManager::listDirectory(const std::string& path) con
 const FileEntry* FileManager::getMetadata(const std::string& path) const {
     return findEntry(path);
 }
+
+// Write data to a file
+void FileManager::writeFile(const std::string& path, const std::string& data, bool append) {
+    const auto* entry = findEntry(path);
+    if (!entry) throw std::runtime_error("File does not exist.");
+    if (!entry) {
+        std::cerr << "Error: File not found for path: " << path << std::endl;
+        throw std::runtime_error("File does not exist.");
+    }
+    if (entry->type != FileType::File) throw std::runtime_error("Path is not a file.");
+
+    // Calculate the total data size after the write
+    std::string fileData = append ? readFile(path) : "";
+    fileData += data;
+
+    size_t newSize = fileData.size();
+    size_t requiredBlocks = (newSize + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
+    // Update blocks
+    std::vector<size_t> newBlocks;
+    for (size_t i = 0; i < requiredBlocks; ++i) {
+        if (i < entry->blockIndices.size()) {
+            newBlocks.push_back(entry->blockIndices[i]); // Reuse existing blocks
+        } else {
+            newBlocks.push_back(diskManager.allocateBlock()); // Allocate new blocks
+        }
+    }
+
+    // Write the data block by block
+    for (size_t i = 0; i < requiredBlocks; ++i) {
+        size_t blockIndex = newBlocks[i];
+        std::string blockData = fileData.substr(i * BLOCK_SIZE, BLOCK_SIZE);
+        diskManager.writeBlock(blockIndex, blockData);
+    }
+
+    // Free any extra blocks
+    for (size_t i = requiredBlocks; i < entry->blockIndices.size(); ++i) {
+        diskManager.setBlockFree(entry->blockIndices[i]);
+    }
+
+    // Update metadata
+    FileEntry updatedEntry = *entry;
+    updatedEntry.size = newSize;
+    updatedEntry.blockIndices = newBlocks;
+
+    fileTable.addEntry(updatedEntry); // Replace the old entry
+}
+
+// Read data from a file
+std::string FileManager::readFile(const std::string& path) const {
+    const auto* entry = findEntry(path);
+    if (!entry) throw std::runtime_error("File does not exist.");
+    if (entry->type != FileType::File) throw std::runtime_error("Path is not a file.");
+
+    // Read the data block by block
+    std::string data;
+    for (size_t blockIndex : entry->blockIndices) {
+        data += diskManager.readBlock(blockIndex);
+    }
+
+    // Trim the data to the file's actual size
+    data.resize(entry->size);
+    return data;
+}

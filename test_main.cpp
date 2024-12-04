@@ -184,3 +184,45 @@ TEST_F(FileManagerTests, RootDeletionGuard) {
     EXPECT_THROW(fileManager->deleteDirectory("/", true), std::runtime_error);
     EXPECT_THROW(fileManager->deleteDirectory("/root", true), std::runtime_error);
 }
+
+// Write and read data from a file
+TEST_F(FileManagerTests, WriteAndReadFile) {
+    DiskManager diskManager("test_wr_disk.dat", MAX_BLOCKS); // Initialize DiskManager
+    FileManager fileManager(diskManager); // Pass DiskManager to FileManager
+
+    // Create a file
+    ASSERT_NO_THROW(fileManager.createFile("/file.txt", 0));
+
+    // Write data
+    std::string data1 = "Hello, ";
+    std::string data2 = "World!";
+
+    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", data1, false));
+    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", data2, true));
+
+    // Read data
+    std::string result;
+    ASSERT_NO_THROW(result = fileManager.readFile("/file.txt"));
+    ASSERT_EQ(result, "Hello, World!");
+}
+
+// Overwrite a file
+TEST_F(FileManagerTests, OverwriteFile) {
+    DiskManager diskManager("test_ow_disk.dat", MAX_BLOCKS); // Initialize DiskManager
+    FileManager fileManager(diskManager); // Pass DiskManager to FileManager
+
+    // Create a file
+    ASSERT_NO_THROW(fileManager.createFile("/file.txt", 0));
+
+    // Write initial data
+    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", "Initial data", false));
+
+    // Overwrite with new data
+    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", "New data", false));
+
+    // Verify the data
+    std::string result;
+    ASSERT_NO_THROW(result = fileManager.readFile("/file.txt"));
+    ASSERT_EQ(result, "New data");
+}
+

@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <regex>
 #include <sstream>
+#include <iostream>
 
 // Enum for File Type
 enum class FileType {
@@ -51,6 +52,8 @@ public:
     void deleteDirectory(const std::string& path, bool recursive = false);
     std::vector<std::string> listDirectory(const std::string& path) const;
     const FileEntry* getMetadata(const std::string& path) const;
+    void writeFile(const std::string& path, const std::string& data, bool append);
+    std::string readFile(const std::string& path) const;
 
 private:
     DiskManager& diskManager;
