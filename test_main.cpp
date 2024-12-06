@@ -2,6 +2,7 @@
 #include "disk_manager.h"
 #include "file_manager.h"
 #include <fstream>
+#include <sstream>
 
 // Constants
 const std::string TEST_DISK = "test_disk.dat";
@@ -65,7 +66,9 @@ protected:
     FileManager* fileManager;
 
     void SetUp() override {
-        diskManager = new DiskManager(TEST_DISK, MAX_BLOCKS);
+        const std::string testDisk = "test_disk_" + std::string(::testing::UnitTest::GetInstance()->current_test_info()->test_case_name()) + ".dat";
+        initializeDiskFile(testDisk);
+        diskManager = new DiskManager(testDisk, MAX_BLOCKS);
         fileManager = new FileManager(*diskManager);
     }
 
@@ -187,6 +190,8 @@ TEST_F(FileManagerTests, RootDeletionGuard) {
 
 // Write and read data from a file
 TEST_F(FileManagerTests, WriteAndReadFile) {
+    initializeDiskFile("test_wr_disk.dat"); // Ensure the disk is initialized
+
     DiskManager diskManager("test_wr_disk.dat", MAX_BLOCKS); // Initialize DiskManager
     FileManager fileManager(diskManager); // Pass DiskManager to FileManager
 
@@ -204,10 +209,14 @@ TEST_F(FileManagerTests, WriteAndReadFile) {
     std::string result;
     ASSERT_NO_THROW(result = fileManager.readFile("/file.txt"));
     ASSERT_EQ(result, "Hello, World!");
+
+    std::cout << "Final file content: " << result << std::endl;
 }
 
-// Overwrite a file
+// Overwrites a file
 TEST_F(FileManagerTests, OverwriteFile) {
+    initializeDiskFile("test_ow_disk.dat"); // Ensure the disk is initialized
+
     DiskManager diskManager("test_ow_disk.dat", MAX_BLOCKS); // Initialize DiskManager
     FileManager fileManager(diskManager); // Pass DiskManager to FileManager
 
@@ -217,12 +226,29 @@ TEST_F(FileManagerTests, OverwriteFile) {
     // Write initial data
     ASSERT_NO_THROW(fileManager.writeFile("/file.txt", "Initial data", false));
 
+    // Verify data
+    std::string initialContent;
+    ASSERT_NO_THROW(initialContent = fileManager.readFile("/file.txt"));
+    ASSERT_EQ(initialContent, "Initial data");
+    std::cout << "Initial file content: " << initialContent << std::endl;
+
     // Overwrite with new data
     ASSERT_NO_THROW(fileManager.writeFile("/file.txt", "New data", false));
 
-    // Verify the data
-    std::string result;
-    ASSERT_NO_THROW(result = fileManager.readFile("/file.txt"));
-    ASSERT_EQ(result, "New data");
+    // Verify the new data
+    std::string updatedContent;
+    ASSERT_NO_THROW(updatedContent = fileManager.readFile("/file.txt"));
+    ASSERT_EQ(updatedContent, "New data");
+    std::cout << "Updated file content: " << updatedContent << std::endl;
 }
 
+TEST_F(FileManagerTests, OpenFile) {
+    // Create a file
+    fileManager->createFile("/example.txt", 0);
+    
+    // Write some content
+    fileManager->writeFile("/example.txt", "This is a test file.", false);
+
+    // Open and display the file
+    ASSERT_NO_THROW(fileManager->openFile("/example.txt"));
+}

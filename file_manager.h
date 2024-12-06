@@ -54,6 +54,7 @@ public:
     const FileEntry* getMetadata(const std::string& path) const;
     void writeFile(const std::string& path, const std::string& data, bool append);
     std::string readFile(const std::string& path) const;
+    void openFile(const std::string& path) const;
 
 private:
     DiskManager& diskManager;

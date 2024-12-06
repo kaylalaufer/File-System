@@ -3,6 +3,8 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
+#include <sstream>
 
 // Constants
 const size_t MAX_BLOCKS = 256;

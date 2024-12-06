@@ -193,46 +193,59 @@ void FileManager::writeFile(const std::string& path, const std::string& data, bo
     const auto* entry = findEntry(path);
     if (!entry) throw std::runtime_error("File does not exist.");
     if (entry->type != FileType::File) throw std::runtime_error("Path is not a file.");
+
     // Calculate the total data size after the write
     std::string fileData = append ? readFile(path) : "";
     fileData += data;
 
-    std::cout << fileData << std::endl;
+    // Ensure data fits within the file's maximum block capacity
+    if (fileData.size() > MAX_BLOCKS * BLOCK_SIZE) {
+        throw std::runtime_error("File exceeds maximum size");
+    }
 
     size_t newSize = fileData.size();
     size_t requiredBlocks = (newSize + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    // Update blocks
+    // Allocate or reuse blocks
     std::vector<size_t> newBlocks;
-    for (size_t i = 0; i < requiredBlocks; ++i) {
-        if (i < entry->blockIndices.size()) {
-            newBlocks.push_back(entry->blockIndices[i]); // Reuse existing blocks
-        } else {
-            newBlocks.push_back(diskManager.allocateBlock()); // Allocate new blocks
+    try {
+        for (size_t i = 0; i < requiredBlocks; ++i) {
+            if (i < entry->blockIndices.size()) {
+                newBlocks.push_back(entry->blockIndices[i]); // Reuse existing blocks
+            } else {
+                newBlocks.push_back(diskManager.allocateBlock()); // Allocate new blocks
+            }
         }
+
+        // Write data block by block
+        for (size_t i = 0; i < requiredBlocks; ++i) {
+            size_t blockIndex = newBlocks[i];
+            std::string blockData = fileData.substr(i * BLOCK_SIZE, BLOCK_SIZE);
+            diskManager.writeBlock(blockIndex, blockData);
+        }
+
+        // Free any extra blocks
+        for (size_t i = requiredBlocks; i < entry->blockIndices.size(); ++i) {
+            diskManager.setBlockFree(entry->blockIndices[i]);
+        }
+
+        // Update metadata
+        FileEntry updatedEntry = *entry;
+        updatedEntry.size = newSize;
+        updatedEntry.blockIndices = newBlocks;
+
+        // Replace the old entry
+        fileTable.removeEntry(updatedEntry.name);
+        fileTable.addEntry(updatedEntry);
+    } catch (const std::exception& e) {
+        // Rollback newly allocated blocks in case of an error
+        for (size_t i = entry->blockIndices.size(); i < newBlocks.size(); ++i) {
+            diskManager.setBlockFree(newBlocks[i]);
+        }
+        throw; // Re-throw the exception
     }
-
-    // Write the data block by block
-    for (size_t i = 0; i < requiredBlocks; ++i) {
-        size_t blockIndex = newBlocks[i];
-        std::string blockData = fileData.substr(i * BLOCK_SIZE, BLOCK_SIZE);
-        diskManager.writeBlock(blockIndex, blockData);
-    }
-
-    // Free any extra blocks
-    for (size_t i = requiredBlocks; i < entry->blockIndices.size(); ++i) {
-        diskManager.setBlockFree(entry->blockIndices[i]);
-    }
-
-    // Update metadata
-    FileEntry updatedEntry = *entry;
-    updatedEntry.size = newSize;
-    updatedEntry.blockIndices = newBlocks;
-
-    // Replace the old entry in FileTable
-    fileTable.removeEntry(updatedEntry.name); // Remove the old entry
-    fileTable.addEntry(updatedEntry); // Add the updated entry
 }
+
 
 // Read data from a file
 std::string FileManager::readFile(const std::string& path) const {
@@ -250,4 +263,17 @@ std::string FileManager::readFile(const std::string& path) const {
     // Trim the data to the file's actual size
     data.resize(entry->size);
     return data;
+}
+
+void FileManager::openFile(const std::string& path) const {
+    const auto* entry = findEntry(path);
+    if (!entry) throw std::runtime_error("File does not exist.");
+    if (entry->type != FileType::File) throw std::runtime_error("Path is not a file.");
+
+    std::string content = readFile(path);
+    if (content.empty()) {
+        std::cout << "File is empty." << std::endl;
+    } else {
+        std::cout << "Contents of " << path << ":\n" << content << std::endl;
+    }
 }

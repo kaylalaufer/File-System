@@ -30,6 +30,8 @@ DiskManager::DiskManager(const std::string& diskName, size_t numBlocks)
     : diskName(diskName), numBlocks(numBlocks), bitmap(numBlocks) {}
 
 void DiskManager::writeBlock(size_t blockIndex, const std::string& data) {
+    std::cout << "Attempting to write block: " << blockIndex << " to disk: " << diskName << std::endl;
+
     if (data.size() > BLOCK_SIZE) {
         throw std::runtime_error("Data size exceeds block size");
     }
