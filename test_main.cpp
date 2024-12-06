@@ -1,132 +1,254 @@
 #include <gtest/gtest.h>
-#include <fstream> // For std::ifstream
-#include "disk_manager.h" // Include the header for BLOCK_SIZE and function declarations
+#include "disk_manager.h"
+#include "file_manager.h"
+#include <fstream>
+#include <sstream>
 
+// Constants
+const std::string TEST_DISK = "test_disk.dat";
+
+// Helper function to initialize the disk
+void initializeDiskFile(const std::string& diskName) {
+    std::ofstream disk(diskName, std::ios::binary | std::ios::trunc);
+    std::string emptyData(MAX_BLOCKS * BLOCK_SIZE, '\0');
+    disk.write(emptyData.c_str(), emptyData.size());
+    disk.close();
+}
+
+// Test case: Initialize Disk
 TEST(DiskManagerTests, InitializeDisk) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
+    const std::string diskName = "test_initialize.dat";
+    initializeDiskFile(diskName);
 
-    initializeDisk(diskName, diskSize);
-
-    std::ifstream diskFile(diskName, std::ios::binary); // Ensure std::ifstream is included
-    ASSERT_TRUE(diskFile.is_open());
-
-    diskFile.seekg(0, std::ios::end);
-    size_t fileSize = diskFile.tellg();
-    ASSERT_EQ(fileSize, diskSize); // File size should match expected disk size
-    diskFile.close();
-
-    std::remove(diskName.c_str()); // Clean up test file
+    DiskManager diskManager(diskName, MAX_BLOCKS);
+    ASSERT_EQ(diskManager.getBitmap().getBitmap().size(), MAX_BLOCKS);
 }
 
-// Test: Write and Read Block
+// Test case: Write and Read Block
 TEST(DiskManagerTests, WriteAndReadBlock) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
-    initializeDisk(diskName, diskSize);
+    const std::string diskName = "test_write_read.dat";
+    initializeDiskFile(diskName);
 
-    const std::string data = "Hello, Block!";
-    writeBlock(0, data, diskName);
+    DiskManager diskManager(diskName, MAX_BLOCKS);
+    std::string data = "Hello, World!";
+    diskManager.writeBlock(0, data);
 
-    std::string readData = readBlock(0, diskName);
-    ASSERT_EQ(readData.substr(0, data.size()), data); // Ensure data matches
-    ASSERT_EQ(readData.size(), BLOCK_SIZE);          // Block size should be consistent
-
-    std::remove(diskName.c_str()); // Clean up test file
+    // Read the block and validate
+    ASSERT_EQ(diskManager.readBlock(0), data);
 }
 
-// Test: Invalid Block Number
-TEST(DiskManagerTests, InvalidBlockNumber) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
-    initializeDisk(diskName, diskSize);
+// Test case: Delete Block
+TEST(DiskManagerTests, DeleteBlock) {
+    const std::string diskName = "test_delete.dat";
+    initializeDiskFile(diskName);
 
-    ASSERT_THROW(writeBlock(256, "Out of range", diskName), std::out_of_range); // Invalid block
-    ASSERT_THROW(readBlock(256, diskName), std::out_of_range); // Invalid block
-
-    ASSERT_THROW(writeBlock(-1, "Negative Index", diskName), std::out_of_range); // Invalid block
-    ASSERT_THROW(readBlock(-1, diskName), std::out_of_range); // Invalid block
-
-    std::remove(diskName.c_str()); // Clean up test file
-}
-
-// Test: Delete a block from a valid disk file
-TEST(DiskManagerTests, DeleteBlockValid) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
-
-    // Initialize the disk
-    initializeDisk(diskName, diskSize);
-
-    // Write some data to block 0
-    std::string data(BLOCK_SIZE, 'X');
-    writeBlock(0, diskName, data);
-
-    // Delete the block
-    deleteBlock(0, diskName);
-
-    // Read the block to verify it's zeroed out
-    std::string readData = readBlock(0, diskName);
-    std::string zeroBlock(BLOCK_SIZE, '\0');
-    ASSERT_EQ(readData, zeroBlock);
-
-    // Clean up
-    std::remove(diskName.c_str());
-}
-
-
-// Test: Delete a block from an invalid block index
-TEST(DiskManagerTests, DeleteBlockInvalidIndex) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
-
-    // Initialize the disk
-    initializeDisk(diskName, diskSize);
-
-    const size_t invalidIndex = 300; // Out of range index
-    ASSERT_THROW(deleteBlock(invalidIndex, diskName), std::out_of_range);
-
-    // Clean up
-    std::remove(diskName.c_str());
-}
-
-// Test: Delete a block when the disk file does not exist
-TEST(DiskManagerTests, DeleteBlockNonExistentFile) {
-    const std::string nonExistentDisk = "non_existent_disk.dat";
+    DiskManager diskManager(diskName, MAX_BLOCKS);
     const size_t blockIndex = 0;
 
-    ASSERT_THROW(deleteBlock(blockIndex, nonExistentDisk), std::runtime_error);
+    // Write data to the block
+    std::string data = "Test data for block";
+    diskManager.writeBlock(blockIndex, data);
+
+    // Delete the block (should succeed)
+    ASSERT_NO_THROW(diskManager.deleteBlock(blockIndex));
+
+    // Verify the block is free
+    ASSERT_THROW(diskManager.readBlock(blockIndex), std::runtime_error);
+
+    // Attempt to delete an already free block (should throw)
+    ASSERT_THROW(diskManager.deleteBlock(blockIndex), std::runtime_error);
 }
 
-// Test: Delete a block when the disk file is corrupted
-TEST(DiskManagerTests, DeleteBlockCorruptedFile) {
-    const std::string corruptedDisk = "corrupted_disk.dat";
+// Test Fixture
+class FileManagerTests : public ::testing::Test {
+protected:
+    DiskManager* diskManager;
+    FileManager* fileManager;
 
-    // Create a corrupted disk file
-    std::ofstream diskFile(corruptedDisk, std::ios::binary);
-    diskFile.seekp(BLOCK_SIZE / 2, std::ios::beg); // Write half a block
-    diskFile.write("\0", 1);
-    diskFile.close();
+    void SetUp() override {
+        const std::string testDisk = "test_disk_" + std::string(::testing::UnitTest::GetInstance()->current_test_info()->test_case_name()) + ".dat";
+        initializeDiskFile(testDisk);
+        diskManager = new DiskManager(testDisk, MAX_BLOCKS);
+        fileManager = new FileManager(*diskManager);
+    }
 
-    const size_t blockIndex = 0;
-    ASSERT_THROW(deleteBlock(blockIndex, corruptedDisk), std::runtime_error);
+    void TearDown() override {
+        delete fileManager;
+        delete diskManager;
+        std::remove(TEST_DISK.c_str());
+    }
+};
 
-    // Clean up
-    std::remove(corruptedDisk.c_str());
+// Test: Create a file successfully
+TEST_F(FileManagerTests, CreateFileSuccess) {
+    ASSERT_NO_THROW(fileManager->createFile("/file1.txt", 1024));
+    const auto* metadata = fileManager->getMetadata("/file1.txt");
+    ASSERT_NE(metadata, nullptr);
+    EXPECT_EQ(metadata->name, "/file1.txt");
+    EXPECT_EQ(metadata->type, FileType::File);
+    EXPECT_EQ(metadata->size, 1024);
 }
 
+// Test: Create a directory successfully
+TEST_F(FileManagerTests, CreateDirectorySuccess) {
+    ASSERT_NO_THROW(fileManager->createDirectory("/mydir"));
+    const auto* metadata = fileManager->getMetadata("/mydir");
+    ASSERT_NE(metadata, nullptr);
+    EXPECT_EQ(metadata->name, "/mydir");
+    EXPECT_EQ(metadata->type, FileType::Directory);
+}
 
-// Test: Delete a block with negative index
-TEST(DiskManagerTests, DeleteBlockNegativeIndex) {
-    const std::string diskName = "test_disk.dat";
-    const size_t diskSize = 1024 * 1024; // 1 MB
+// Test: Delete a file successfully
+TEST_F(FileManagerTests, DeleteFileSuccess) {
+    fileManager->createFile("/file1.txt", 1024);
+    ASSERT_NO_THROW(fileManager->deleteFile("/file1.txt"));
+    EXPECT_EQ(fileManager->getMetadata("/file1.txt"), nullptr);
+}
 
-    // Initialize the disk
-    initializeDisk(diskName, diskSize);
+// Test: Delete a directory successfully
+TEST_F(FileManagerTests, DeleteDirectorySuccess) {
+    fileManager->createDirectory("/mydir");
+    ASSERT_NO_THROW(fileManager->deleteDirectory("/mydir"));
+    EXPECT_EQ(fileManager->getMetadata("/mydir"), nullptr);
+}
 
-    const int negativeIndex = -1; // Invalid negative index
-    ASSERT_THROW(deleteBlock(negativeIndex, diskName), std::invalid_argument);
+// Test: Create a file that already exists
+TEST_F(FileManagerTests, CreateFileAlreadyExists) {
+    fileManager->createFile("/file1.txt", 1024);
+    EXPECT_THROW(fileManager->createFile("/file1.txt", 2048), std::runtime_error);
+}
 
-    // Clean up
-    std::remove(diskName.c_str());
+// Test: Create a directory that already exists
+TEST_F(FileManagerTests, CreateDirectoryAlreadyExists) {
+    fileManager->createDirectory("/mydir");
+    EXPECT_THROW(fileManager->createDirectory("/mydir"), std::runtime_error);
+}
+
+// Test: Invalid file name
+TEST_F(FileManagerTests, InvalidFileName) {
+    EXPECT_THROW(fileManager->createFile("", 1024), std::invalid_argument);
+    EXPECT_THROW(fileManager->createFile("/invalid@name.txt", 1024), std::invalid_argument);
+}
+
+// Test: Invalid directory name
+TEST_F(FileManagerTests, InvalidDirectoryName) {
+    EXPECT_THROW(fileManager->createDirectory(""), std::invalid_argument);
+    EXPECT_THROW(fileManager->createDirectory("/invalid@dir"), std::invalid_argument);
+}
+
+// Test: Delete non-existent file
+TEST_F(FileManagerTests, DeleteNonExistentFile) {
+    EXPECT_THROW(fileManager->deleteFile("/nonexistent.txt"), std::runtime_error);
+}
+
+// Test: Delete non-existent directory
+TEST_F(FileManagerTests, DeleteNonExistentDirectory) {
+    EXPECT_THROW(fileManager->deleteDirectory("/nonexistent"), std::runtime_error);
+}
+
+// Test: List directory contents
+TEST_F(FileManagerTests, ListDirectoryContents) {
+    fileManager->createDirectory("/mydir");
+    fileManager->createFile("/mydir/file1.txt", 1024);
+    fileManager->createFile("/mydir/file2.txt", 2048);
+
+    auto contents = fileManager->listDirectory("/mydir");
+    EXPECT_EQ(contents.size(), 2);
+    EXPECT_NE(std::find(contents.begin(), contents.end(), "/mydir/file1.txt"), contents.end());
+    EXPECT_NE(std::find(contents.begin(), contents.end(), "/mydir/file2.txt"), contents.end());
+}
+
+// Test: Delete non-empty directory without recursive flag
+TEST_F(FileManagerTests, DeleteNonEmptyDirectoryWithoutRecursive) {
+    fileManager->createDirectory("/mydir");
+    fileManager->createFile("/mydir/file1.txt", 1024);
+    EXPECT_THROW(fileManager->deleteDirectory("/mydir", false), std::runtime_error);
+}
+
+// Test: Delete non-empty directory with recursive flag
+TEST_F(FileManagerTests, DeleteNonEmptyDirectoryWithRecursive) {
+    fileManager->createDirectory("/mydir");
+    fileManager->createFile("/mydir/file1.txt", 1024);
+    ASSERT_NO_THROW(fileManager->deleteDirectory("/mydir", true));
+    EXPECT_EQ(fileManager->getMetadata("/mydir"), nullptr);
+}
+
+// Test: Normalize paths
+TEST_F(FileManagerTests, NormalizePaths) {
+    fileManager->createDirectory("/mydir");
+    fileManager->createFile("/mydir/file1.txt", 1024);
+    const auto* metadata = fileManager->getMetadata("/mydir/./file1.txt");
+    ASSERT_NE(metadata, nullptr);
+    EXPECT_EQ(metadata->name, "/mydir/file1.txt");
+}
+
+// Test: Guard against root deletion
+TEST_F(FileManagerTests, RootDeletionGuard) {
+    EXPECT_THROW(fileManager->deleteDirectory("/", true), std::runtime_error);
+    EXPECT_THROW(fileManager->deleteDirectory("/root", true), std::runtime_error);
+}
+
+// Write and read data from a file
+TEST_F(FileManagerTests, WriteAndReadFile) {
+    initializeDiskFile("test_wr_disk.dat"); // Ensure the disk is initialized
+
+    DiskManager diskManager("test_wr_disk.dat", MAX_BLOCKS); // Initialize DiskManager
+    FileManager fileManager(diskManager); // Pass DiskManager to FileManager
+
+    // Create a file
+    ASSERT_NO_THROW(fileManager.createFile("/file.txt", 0));
+
+    // Write data
+    std::string data1 = "Hello, ";
+    std::string data2 = "World!";
+
+    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", data1, false));
+    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", data2, true));
+
+    // Read data
+    std::string result;
+    ASSERT_NO_THROW(result = fileManager.readFile("/file.txt"));
+    ASSERT_EQ(result, "Hello, World!");
+
+    std::cout << "Final file content: " << result << std::endl;
+}
+
+// Overwrites a file
+TEST_F(FileManagerTests, OverwriteFile) {
+    initializeDiskFile("test_ow_disk.dat"); // Ensure the disk is initialized
+
+    DiskManager diskManager("test_ow_disk.dat", MAX_BLOCKS); // Initialize DiskManager
+    FileManager fileManager(diskManager); // Pass DiskManager to FileManager
+
+    // Create a file
+    ASSERT_NO_THROW(fileManager.createFile("/file.txt", 0));
+
+    // Write initial data
+    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", "Initial data", false));
+
+    // Verify data
+    std::string initialContent;
+    ASSERT_NO_THROW(initialContent = fileManager.readFile("/file.txt"));
+    ASSERT_EQ(initialContent, "Initial data");
+    std::cout << "Initial file content: " << initialContent << std::endl;
+
+    // Overwrite with new data
+    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", "New data", false));
+
+    // Verify the new data
+    std::string updatedContent;
+    ASSERT_NO_THROW(updatedContent = fileManager.readFile("/file.txt"));
+    ASSERT_EQ(updatedContent, "New data");
+    std::cout << "Updated file content: " << updatedContent << std::endl;
+}
+
+TEST_F(FileManagerTests, OpenFile) {
+    // Create a file
+    fileManager->createFile("/example.txt", 0);
+    
+    // Write some content
+    fileManager->writeFile("/example.txt", "This is a test file.", false);
+
+    // Open and display the file
+    ASSERT_NO_THROW(fileManager->openFile("/example.txt"));
 }

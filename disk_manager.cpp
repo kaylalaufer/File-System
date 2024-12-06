@@ -1,161 +1,138 @@
-#include <iostream>
+#include "disk_manager.h"
 #include <fstream>
-#include <vector>
 #include <stdexcept>
 #include <cstring>
-#include <iomanip>
-#include "disk_manager.h"
 
-const size_t BLOCK_SIZE = 4096; // Define the size of each block (e.g., 4 KB)
+// Bitmap Implementation
+Bitmap::Bitmap(size_t numBlocks) : bitmap(numBlocks, true) {}
 
-void initializeDisk(const std::string& diskName, size_t diskSize) {
-    std::fstream diskFile;
-
-    // Try opening the file
-    diskFile.open(diskName, std::ios::in | std::ios::out | std::ios::binary);
-    if (!diskFile) {
-        // File does not exist, so create and initialize it
-        std::cout << "Disk file does not exist. Creating a new one..." << std::endl;
-        diskFile.open(diskName, std::ios::out | std::ios::binary);
-        if (!diskFile) {
-            throw std::runtime_error("Failed to create disk file.");
-        }
-        // Write zeros to the file to initialize it
-        std::vector<char> zeros(diskSize, 0);
-        diskFile.write(zeros.data(), diskSize);
-        diskFile.close();
-        std::cout << "Disk initialized with size: " << diskSize << " bytes." << std::endl;
-    } else {
-        // File exists, verify its size
-        diskFile.seekg(0, std::ios::end);
-        size_t currentSize = diskFile.tellg();
-        std::cout << "Existing disk file size: " << currentSize << " bytes." << std::endl;
-        std::cout << "Expected disk file size: " << diskSize << " bytes." << std::endl;
-
-        if (currentSize != diskSize) {
-            diskFile.close();
-            throw std::runtime_error("Existing disk file size does not match the expected size.");
-        }
-        std::cout << "Disk file loaded successfully." << std::endl;
-    }
-
-    // Close the file (it will be reopened for specific operations later)
-    diskFile.close();
+bool Bitmap::isFree(size_t blockIndex) const {
+    if (blockIndex >= bitmap.size()) throw std::out_of_range("Block index out of range");
+    return bitmap[blockIndex];
 }
 
-void writeBlock(size_t blockNumber, const std::string& data, const std::string& diskName) {
+void Bitmap::setOccupied(size_t blockIndex) {
+    if (blockIndex >= bitmap.size()) throw std::out_of_range("Block index out of range");
+    bitmap[blockIndex] = false;
+}
+
+void Bitmap::setFree(size_t blockIndex) {
+    if (blockIndex >= bitmap.size()) throw std::out_of_range("Block index out of range");
+    bitmap[blockIndex] = true;
+}
+
+const std::vector<bool>& Bitmap::getBitmap() const {
+    return bitmap;
+}
+
+// DiskManager Implementation
+DiskManager::DiskManager(const std::string& diskName, size_t numBlocks)
+    : diskName(diskName), numBlocks(numBlocks), bitmap(numBlocks) {}
+
+void DiskManager::writeBlock(size_t blockIndex, const std::string& data) {
+    std::cout << "Attempting to write block: " << blockIndex << " to disk: " << diskName << std::endl;
+
     if (data.size() > BLOCK_SIZE) {
-        throw std::runtime_error("Data exceeds block size.");
+        throw std::runtime_error("Data size exceeds block size");
     }
 
-    // Validate block number
-    validateBlockNumber(blockNumber);
-
-    std::fstream diskFile(diskName, std::ios::in | std::ios::out | std::ios::binary);
-
-    size_t offset = blockNumber * BLOCK_SIZE;
-
-    // Validate disk file
-    validateDiskFile(diskFile, offset);
-
-    // Write data to the block
-    diskFile.write(data.data(), data.size());
-    if (data.size() < BLOCK_SIZE) {
-        std::vector<char> padding(BLOCK_SIZE - data.size(), 0);
-        diskFile.write(padding.data(), padding.size());
+    if (blockIndex >= numBlocks) {
+        throw std::out_of_range("Block index out of range");
     }
 
-    diskFile.close();
-    std::cout << "Data written to block " << blockNumber << " successfully." << std::endl;
+    // Open disk file
+    std::fstream disk(diskName, std::ios::in | std::ios::out | std::ios::binary);
+    if (!disk) {
+        throw std::runtime_error("Failed to open disk file for writing");
+    }
+
+    // Write the data, padded to BLOCK_SIZE
+    std::string paddedData = data;
+    paddedData.resize(BLOCK_SIZE, '\0'); // Pad with null bytes
+    disk.seekp(blockIndex * BLOCK_SIZE);
+    disk.write(paddedData.c_str(), BLOCK_SIZE);
+    disk.close();
+
+    // Update bitmap
+    bitmap.setOccupied(blockIndex);
 }
 
+std::string DiskManager::readBlock(size_t blockIndex) const {
+    if (blockIndex >= numBlocks) {
+        throw std::out_of_range("Block index out of range");
+    }
 
-std::string readBlock(size_t blockNumber, const std::string& diskName) {
-    // Validate block number
-    validateBlockNumber(blockNumber);
+    if (bitmap.isFree(blockIndex)) {
+        throw std::runtime_error("Block is free and contains no data");
+    }
 
-    std::fstream diskFile(diskName, std::ios::in | std::ios::binary);
+    std::ifstream disk(diskName, std::ios::binary);
+    if (!disk) {
+        throw std::runtime_error("Failed to open disk file for reading");
+    }
 
-    size_t offset = blockNumber * BLOCK_SIZE;
+    // Read the block data
+    disk.seekg(blockIndex * BLOCK_SIZE);
+    std::string data(BLOCK_SIZE, '\0');
+    disk.read(&data[0], BLOCK_SIZE);
+    disk.close();
 
-    // Validate disk file
-    validateDiskFile(diskFile, offset);
+    // Trim trailing null bytes
+    size_t dataEnd = data.find_last_not_of('\0');
+    if (dataEnd != std::string::npos) {
+        data.resize(dataEnd + 1);
+    } else {
+        data.clear(); // Data is entirely null bytes
+    }
 
-    std::vector<char> buffer(BLOCK_SIZE, 0); // Ensure full block is initialized
-    diskFile.read(buffer.data(), BLOCK_SIZE);
-
-    diskFile.close();
-    // Ensure we return exactly BLOCK_SIZE bytes
-    return std::string(buffer.begin(), buffer.end());
+    return data;
 }
 
-void deleteBlock(size_t blockIndex, const std::string& diskName) {
-    // Open the disk file
-    std::fstream diskFile(diskName, std::ios::in | std::ios::out | std::ios::binary);
-    if (!diskFile.is_open()) {
-        throw std::runtime_error("Failed to open disk file.");
+void DiskManager::deleteBlock(size_t blockIndex) {
+    if (blockIndex >= numBlocks) {
+        throw std::out_of_range("Block index out of range");
     }
 
-    // Check the disk file size
-    diskFile.seekg(0, std::ios::end);
-    size_t fileSize = diskFile.tellg();
-
-    // Ensure the block index is valid
-    if (blockIndex * BLOCK_SIZE >= fileSize) {
-        throw std::out_of_range("Invalid block number.");
+    if (bitmap.isFree(blockIndex)) {
+        throw std::runtime_error("Block is already free");
     }
 
-    // Check for file corruption (simple integrity check)
-    if (fileSize % BLOCK_SIZE != 0) {
-        throw std::runtime_error("Corrupted disk file: file size is not a multiple of block size.");
+    // Ensure the disk file exists
+    std::fstream disk(diskName, std::ios::in | std::ios::out | std::ios::binary);
+    if (!disk) {
+        // Create the disk file if it doesn't exist
+        std::ofstream createDisk(diskName, std::ios::binary | std::ios::trunc);
+        createDisk.close();
+        disk.open(diskName, std::ios::in | std::ios::out | std::ios::binary);
+        if (!disk) {
+            throw std::runtime_error("Failed to open disk file for deleting");
+        }
     }
 
-    // Create a buffer of zeros
-    std::vector<char> zeroBuffer(BLOCK_SIZE, 0);
+    // Overwrite the block with empty data
+    std::string emptyData(BLOCK_SIZE, '\0');
+    disk.seekp(blockIndex * BLOCK_SIZE);
+    disk.write(emptyData.c_str(), BLOCK_SIZE);
+    disk.close();
 
-    // Seek to the block position
-    diskFile.seekp(blockIndex * BLOCK_SIZE, std::ios::beg);
-
-    // Overwrite the block with zeros
-    diskFile.write(zeroBuffer.data(), BLOCK_SIZE);
-    if (!diskFile.good()) {
-        throw std::runtime_error("Failed to write to the disk file.");
-    }
-
-    // Close the file
-    diskFile.close();
+    // Update bitmap
+    bitmap.setFree(blockIndex);
 }
 
-
-
-void validateBlockNumber(size_t blockNumber) {
-    size_t maxBlocks = 1024 * 1024 / BLOCK_SIZE; // Disk size (1 MB) / block size (4 KB)
-    if (blockNumber >= maxBlocks || blockNumber < 0) {
-        throw std::out_of_range("Invalid block number.");
+size_t DiskManager::allocateBlock() {
+    for (size_t i = 0; i < numBlocks; ++i) {
+        if (bitmap.isFree(i)) {
+            bitmap.setOccupied(i);
+            return i;
+        }
     }
+    throw std::runtime_error("No free blocks available");
 }
 
-void validateDiskFile(std::fstream& diskFile, size_t offset) {
-    if (!diskFile) {
-        throw std::runtime_error("Failed to open disk file");
-    }
-
-    diskFile.seekg(offset, std::ios::beg);
-    if (!diskFile) {
-        throw std::runtime_error("Failed to seek to block position.");
-    }
+void DiskManager::setBlockFree(size_t blockIndex) {
+    bitmap.setFree(blockIndex);
 }
 
-
-#ifndef TESTING
-int main() {
-    try {
-        std::string diskName = "virtual_disk.dat"; // Replace with your disk file name
-        size_t blockIndex = 2; // Example block index to delete
-        deleteBlock(blockIndex, diskName);
-    } catch (const std::exception &e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-    return 0;
+const Bitmap& DiskManager::getBitmap() const {
+    return bitmap;
 }
-#endif

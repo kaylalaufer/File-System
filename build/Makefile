@@ -153,6 +153,30 @@ disk_manager.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/disk_manager.cpp.s
 .PHONY : disk_manager.cpp.s
 
+file_manager.o: file_manager.cpp.o
+.PHONY : file_manager.o
+
+# target to build an object file
+file_manager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/file_manager.cpp.o
+.PHONY : file_manager.cpp.o
+
+file_manager.i: file_manager.cpp.i
+.PHONY : file_manager.i
+
+# target to preprocess a source file
+file_manager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/file_manager.cpp.i
+.PHONY : file_manager.cpp.i
+
+file_manager.s: file_manager.cpp.s
+.PHONY : file_manager.s
+
+# target to generate assembly for a file
+file_manager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/file_manager.cpp.s
+.PHONY : file_manager.cpp.s
+
 test_main.o: test_main.cpp.o
 .PHONY : test_main.o
 
@@ -189,6 +213,9 @@ help:
 	@echo "... disk_manager.o"
 	@echo "... disk_manager.i"
 	@echo "... disk_manager.s"
+	@echo "... file_manager.o"
+	@echo "... file_manager.i"
+	@echo "... file_manager.s"
 	@echo "... test_main.o"
 	@echo "... test_main.i"
 	@echo "... test_main.s"
