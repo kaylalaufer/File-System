@@ -80,10 +80,14 @@ const FileEntry* FileManager::findEntry(const std::string& path) const {
 void FileManager::createFile(const std::string& path, size_t size) {
     if (!isValidName(path)) throw std::invalid_argument("Invalid file name.");
 
-    auto tokens = tokenizePath(path);
-    if (tokens.empty()) throw std::invalid_argument("Invalid path.");
-
     std::string resolvedPath = resolvePath(path);
+
+    // Debug: Check FileTable before creation
+    std::cout << "FileTable entries before creating file:" << std::endl;
+    for (const auto& [name, entry] : fileTable.getEntries()) {
+        std::cout << "  " << name << std::endl;
+    }
+
     if (findEntry(resolvedPath)) throw std::runtime_error("File already exists.");
 
     // Allocate required blocks
@@ -94,9 +98,28 @@ void FileManager::createFile(const std::string& path, size_t size) {
         blocks.push_back(blockIndex);
     }
 
+    // Debug: Print block allocations
+    std::cout << "Allocated blocks: ";
+    for (size_t block : blocks) {
+        std::cout << block << " ";
+    }
+    std::cout << std::endl;
+
     // Create the file entry
     FileEntry entry(resolvedPath, FileType::File, size, blocks);
     fileTable.addEntry(entry);
+
+    // Debug: Check FileTable after creation
+    std::cout << "FileTable entries after creating file:" << std::endl;
+    for (const auto& [name, entry] : fileTable.getEntries()) {
+        std::cout << "  " << name << std::endl;
+    }
+
+    std::cout << "Allocated blocks: ";
+    for (size_t block : blocks) {
+        std::cout << block << " ";
+    }
+    std::cout << std::endl; // Should this print nothing??
 }
 
 // Create a directory
@@ -169,15 +192,12 @@ const FileEntry* FileManager::getMetadata(const std::string& path) const {
 void FileManager::writeFile(const std::string& path, const std::string& data, bool append) {
     const auto* entry = findEntry(path);
     if (!entry) throw std::runtime_error("File does not exist.");
-    if (!entry) {
-        std::cerr << "Error: File not found for path: " << path << std::endl;
-        throw std::runtime_error("File does not exist.");
-    }
     if (entry->type != FileType::File) throw std::runtime_error("Path is not a file.");
-
     // Calculate the total data size after the write
     std::string fileData = append ? readFile(path) : "";
     fileData += data;
+
+    std::cout << fileData << std::endl;
 
     size_t newSize = fileData.size();
     size_t requiredBlocks = (newSize + BLOCK_SIZE - 1) / BLOCK_SIZE;
@@ -209,7 +229,9 @@ void FileManager::writeFile(const std::string& path, const std::string& data, bo
     updatedEntry.size = newSize;
     updatedEntry.blockIndices = newBlocks;
 
-    fileTable.addEntry(updatedEntry); // Replace the old entry
+    // Replace the old entry in FileTable
+    fileTable.removeEntry(updatedEntry.name); // Remove the old entry
+    fileTable.addEntry(updatedEntry); // Add the updated entry
 }
 
 // Read data from a file
@@ -222,6 +244,7 @@ std::string FileManager::readFile(const std::string& path) const {
     std::string data;
     for (size_t blockIndex : entry->blockIndices) {
         data += diskManager.readBlock(blockIndex);
+        // std::cout << "hi" << data << std::endl;
     }
 
     // Trim the data to the file's actual size
