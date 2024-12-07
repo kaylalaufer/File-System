@@ -223,6 +223,15 @@ DiskManager_IS_TOP_LEVEL:STATIC=ON
 DiskManager_SOURCE_DIR:STATIC=/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project
 
 //Value Computed by CMake
+FileManagerSystem_BINARY_DIR:STATIC=/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/build
+
+//Value Computed by CMake
+FileManagerSystem_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+FileManagerSystem_SOURCE_DIR:STATIC=/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project
+
+//Value Computed by CMake
 FinalProject_BINARY_DIR:STATIC=/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/build
 
 //Value Computed by CMake
@@ -230,6 +239,9 @@ FinalProject_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 FinalProject_SOURCE_DIR:STATIC=/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project
+
+//No help, variable specified on the command line.
+TEST_BUILD:UNINITIALIZED=ON
 
 
 ########################

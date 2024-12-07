@@ -76,20 +76,18 @@ const FileEntry* FileManager::findEntry(const std::string& path) const {
     return fileTable.getEntry(resolvedPath);
 }
 
+bool isNumber(const std::string& str) {
+    return !str.empty() && std::all_of(str.begin(), str.end(), ::isdigit);
+}
+
 // Create a file
 void FileManager::createFile(const std::string& path, size_t size) {
     if (!isValidName(path)) throw std::invalid_argument("Invalid file name.");
 
     std::string resolvedPath = resolvePath(path);
-
-    // Debug: Check FileTable before creation
-    std::cout << "FileTable entries before creating file:" << std::endl;
-    for (const auto& [name, entry] : fileTable.getEntries()) {
-        std::cout << "  " << name << std::endl;
-    }
-
+    std::cout << "IN FILE MANAGER" << std::endl;
     if (findEntry(resolvedPath)) throw std::runtime_error("File already exists.");
-
+    std::cout << "AFTER ERROR SHOULD BE THROWN" << std::endl;
     // Allocate required blocks
     size_t numBlocks = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
     std::vector<size_t> blocks;
@@ -98,28 +96,9 @@ void FileManager::createFile(const std::string& path, size_t size) {
         blocks.push_back(blockIndex);
     }
 
-    // Debug: Print block allocations
-    std::cout << "Allocated blocks: ";
-    for (size_t block : blocks) {
-        std::cout << block << " ";
-    }
-    std::cout << std::endl;
-
     // Create the file entry
     FileEntry entry(resolvedPath, FileType::File, size, blocks);
     fileTable.addEntry(entry);
-
-    // Debug: Check FileTable after creation
-    std::cout << "FileTable entries after creating file:" << std::endl;
-    for (const auto& [name, entry] : fileTable.getEntries()) {
-        std::cout << "  " << name << std::endl;
-    }
-
-    std::cout << "Allocated blocks: ";
-    for (size_t block : blocks) {
-        std::cout << block << " ";
-    }
-    std::cout << std::endl; // Should this print nothing??
 }
 
 // Create a directory
@@ -257,7 +236,6 @@ std::string FileManager::readFile(const std::string& path) const {
     std::string data;
     for (size_t blockIndex : entry->blockIndices) {
         data += diskManager.readBlock(blockIndex);
-        // std::cout << "hi" << data << std::endl;
     }
 
     // Trim the data to the file's actual size

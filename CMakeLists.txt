@@ -11,6 +11,9 @@ add_executable(runTests
     test_main.cpp
     file_manager.cpp
     disk_manager.cpp
+    command_line.cpp
+    test_cli.cpp
 )
 
 target_link_libraries(runTests gtest gtest_main pthread)
+

@@ -114,11 +114,41 @@ CMakeFiles/runTests.dir/disk_manager.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/runTests.dir/disk_manager.cpp.s"
 	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/disk_manager.cpp" -o CMakeFiles/runTests.dir/disk_manager.cpp.s
 
+CMakeFiles/runTests.dir/command_line.cpp.o: CMakeFiles/runTests.dir/flags.make
+CMakeFiles/runTests.dir/command_line.cpp.o: /Users/kaylalaufer/Documents/Fordham/Operating\ Systems/Final_Project/command_line.cpp
+CMakeFiles/runTests.dir/command_line.cpp.o: CMakeFiles/runTests.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/runTests.dir/command_line.cpp.o"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/runTests.dir/command_line.cpp.o -MF CMakeFiles/runTests.dir/command_line.cpp.o.d -o CMakeFiles/runTests.dir/command_line.cpp.o -c "/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/command_line.cpp"
+
+CMakeFiles/runTests.dir/command_line.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/runTests.dir/command_line.cpp.i"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/command_line.cpp" > CMakeFiles/runTests.dir/command_line.cpp.i
+
+CMakeFiles/runTests.dir/command_line.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/runTests.dir/command_line.cpp.s"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/command_line.cpp" -o CMakeFiles/runTests.dir/command_line.cpp.s
+
+CMakeFiles/runTests.dir/test_cli.cpp.o: CMakeFiles/runTests.dir/flags.make
+CMakeFiles/runTests.dir/test_cli.cpp.o: /Users/kaylalaufer/Documents/Fordham/Operating\ Systems/Final_Project/test_cli.cpp
+CMakeFiles/runTests.dir/test_cli.cpp.o: CMakeFiles/runTests.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/runTests.dir/test_cli.cpp.o"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/runTests.dir/test_cli.cpp.o -MF CMakeFiles/runTests.dir/test_cli.cpp.o.d -o CMakeFiles/runTests.dir/test_cli.cpp.o -c "/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/test_cli.cpp"
+
+CMakeFiles/runTests.dir/test_cli.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/runTests.dir/test_cli.cpp.i"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/test_cli.cpp" > CMakeFiles/runTests.dir/test_cli.cpp.i
+
+CMakeFiles/runTests.dir/test_cli.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/runTests.dir/test_cli.cpp.s"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/test_cli.cpp" -o CMakeFiles/runTests.dir/test_cli.cpp.s
+
 # Object files for target runTests
 runTests_OBJECTS = \
 "CMakeFiles/runTests.dir/test_main.cpp.o" \
 "CMakeFiles/runTests.dir/file_manager.cpp.o" \
-"CMakeFiles/runTests.dir/disk_manager.cpp.o"
+"CMakeFiles/runTests.dir/disk_manager.cpp.o" \
+"CMakeFiles/runTests.dir/command_line.cpp.o" \
+"CMakeFiles/runTests.dir/test_cli.cpp.o"
 
 # External object files for target runTests
 runTests_EXTERNAL_OBJECTS =
@@ -126,9 +156,11 @@ runTests_EXTERNAL_OBJECTS =
 runTests: CMakeFiles/runTests.dir/test_main.cpp.o
 runTests: CMakeFiles/runTests.dir/file_manager.cpp.o
 runTests: CMakeFiles/runTests.dir/disk_manager.cpp.o
+runTests: CMakeFiles/runTests.dir/command_line.cpp.o
+runTests: CMakeFiles/runTests.dir/test_cli.cpp.o
 runTests: CMakeFiles/runTests.dir/build.make
 runTests: CMakeFiles/runTests.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir="/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX executable runTests"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir="/Users/kaylalaufer/Documents/Fordham/Operating Systems/Final_Project/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX executable runTests"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/runTests.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

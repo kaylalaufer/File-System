@@ -129,6 +129,30 @@ runTests/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/build
 .PHONY : runTests/fast
 
+command_line.o: command_line.cpp.o
+.PHONY : command_line.o
+
+# target to build an object file
+command_line.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/command_line.cpp.o
+.PHONY : command_line.cpp.o
+
+command_line.i: command_line.cpp.i
+.PHONY : command_line.i
+
+# target to preprocess a source file
+command_line.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/command_line.cpp.i
+.PHONY : command_line.cpp.i
+
+command_line.s: command_line.cpp.s
+.PHONY : command_line.s
+
+# target to generate assembly for a file
+command_line.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/command_line.cpp.s
+.PHONY : command_line.cpp.s
+
 disk_manager.o: disk_manager.cpp.o
 .PHONY : disk_manager.o
 
@@ -177,6 +201,30 @@ file_manager.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/file_manager.cpp.s
 .PHONY : file_manager.cpp.s
 
+test_cli.o: test_cli.cpp.o
+.PHONY : test_cli.o
+
+# target to build an object file
+test_cli.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/test_cli.cpp.o
+.PHONY : test_cli.cpp.o
+
+test_cli.i: test_cli.cpp.i
+.PHONY : test_cli.i
+
+# target to preprocess a source file
+test_cli.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/test_cli.cpp.i
+.PHONY : test_cli.cpp.i
+
+test_cli.s: test_cli.cpp.s
+.PHONY : test_cli.s
+
+# target to generate assembly for a file
+test_cli.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/test_cli.cpp.s
+.PHONY : test_cli.cpp.s
+
 test_main.o: test_main.cpp.o
 .PHONY : test_main.o
 
@@ -210,12 +258,18 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... runTests"
+	@echo "... command_line.o"
+	@echo "... command_line.i"
+	@echo "... command_line.s"
 	@echo "... disk_manager.o"
 	@echo "... disk_manager.i"
 	@echo "... disk_manager.s"
 	@echo "... file_manager.o"
 	@echo "... file_manager.i"
 	@echo "... file_manager.s"
+	@echo "... test_cli.o"
+	@echo "... test_cli.i"
+	@echo "... test_cli.s"
 	@echo "... test_main.o"
 	@echo "... test_main.i"
 	@echo "... test_main.s"

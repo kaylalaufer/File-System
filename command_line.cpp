@@ -1,6 +1,13 @@
 #include <iostream>
 #include <sstream>
 #include "file_manager.h"
+#include "command_line.h"
+
+
+bool isSizeNumber(const std::string& str) {
+    if (str.empty()) return false;
+    return std::all_of(str.begin(), str.end(), ::isdigit);
+}
 
 void startCLI(FileManager& fileManager) {
     std::cout << "Welcome to the FileManager CLI!" << std::endl;
@@ -27,11 +34,32 @@ void startCLI(FileManager& fileManager) {
                 std::cout << "  list_dir [path]" << std::endl;
                 std::cout << "  exit" << std::endl;
             } else if (command == "create_file") {
-                std::string path;
+                std::string path, sizeStr;
                 size_t size;
-                iss >> path >> size;
+                iss >> path >> sizeStr;
+
+                // Check if the path or size is empty
+                if (path.empty() || sizeStr.empty()) {
+                    std::cerr << "Error: Invalid command. Usage: create_file [path] [size]." << std::endl;
+                    continue;
+                } else if (sizeStr[0] == '-') { // Check if the size is valid
+                    std::cerr << "Error: File size must be a positive number." << std::endl;
+                    continue;
+                } else if (!isNumber(sizeStr)) {
+                    std::cerr << "Invalid size: '" << sizeStr << "'. Please provide a valid number." << std::endl;
+                    continue;
+                }
+
+                // Validate the size
+                try {
+                    size = std::stoul(sizeStr); 
+                } catch (const std::exception& e) {
+                    std::cerr << "Invalid size: '" << sizeStr << "'. Please provide a valid number." << std::endl;
+                }
+
                 fileManager.createFile(path, size);
                 std::cout << "File created at " << path << std::endl;
+
             } else if (command == "create_dir") {
                 std::string path;
                 iss >> path;
@@ -81,8 +109,8 @@ void startCLI(FileManager& fileManager) {
         }
     }
 }
-
-int main() {
+#ifndef TEST_BUILD
+/*int main() {
     const std::string diskName = "cli_disk.dat";
     const size_t numBlocks = 256;
 
@@ -94,4 +122,5 @@ int main() {
     startCLI(fileManager);
 
     return 0;
-}
+}*/
+#endif

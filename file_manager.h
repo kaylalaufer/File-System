@@ -9,6 +9,10 @@
 #include <sstream>
 #include <iostream>
 
+
+// Utility function to check if a string is a number
+bool isNumber(const std::string& str);
+
 // Enum for File Type
 enum class FileType {
     File,
