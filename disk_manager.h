@@ -42,6 +42,9 @@ public:
 
     const Bitmap& getBitmap() const;
 
+    void save(std::ofstream& outFile) const;
+    void load(std::ifstream& inFile);
+
 private:
     std::fstream diskFile;
     std::string diskName;

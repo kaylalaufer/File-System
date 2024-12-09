@@ -89,8 +89,23 @@ void startCLI(FileManager& fileManager) {
             } else if (command == "write_file") {
                 std::string path, data, appendStr;
                 bool append = false;
-                iss >> path >> data >> appendStr;
+                iss >> path;
+
+                // 🔥 Read the entire remaining line as data
+                std::getline(iss, data);
+                
+                // 🔥 Remove leading/trailing spaces and quotes from data
+                data.erase(0, data.find_first_not_of(" \""));
+                data.erase(data.find_last_not_of(" \"") + 1);
+                
+                size_t spacePos = data.find_last_of(' '); 
+                if (spacePos != std::string::npos) {
+                    appendStr = data.substr(spacePos + 1);
+                    data = data.substr(0, spacePos);
+                }
+
                 if (appendStr == "true") append = true;
+                std::cout << data << std::endl;
                 fileManager.writeFile(path, data, append);
                 std::cout << "Data written to " << path << std::endl;
             } else if (command == "read_file") {
@@ -125,19 +140,31 @@ int main() {
     DiskManager diskManager(diskName, 256);
     FileManager fileManager(diskManager);
 
-    // Load existing file system metadata
-    std::ifstream inFile(fileSystemDataFile, std::ios::binary);
+    // 🔥 Load existing disk contents
+    std::ifstream inFile(diskName, std::ios::binary);
     if (inFile) {
-        fileManager.load(inFile);
+        diskManager.load(inFile);
         inFile.close();
+    }
+
+    // 🔥 Load existing file system metadata
+    std::ifstream fsFile(fileSystemDataFile, std::ios::binary);
+    if (fsFile) {
+        fileManager.load(fsFile);
+        fsFile.close();
     }
 
     startCLI(fileManager);
 
-    // Save file system metadata on exit
-    std::ofstream outFile(fileSystemDataFile, std::ios::binary);
-    fileManager.save(outFile);
+    // 🔥 Save disk contents before exit
+    std::ofstream outFile(diskName, std::ios::binary);
+    diskManager.save(outFile);
     outFile.close();
+
+    // 🔥 Save file system metadata before exit
+    std::ofstream fsOut(fileSystemDataFile, std::ios::binary);
+    fileManager.save(fsOut);
+    fsOut.close();
 
     return 0;
 }

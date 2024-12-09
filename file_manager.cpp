@@ -75,6 +75,7 @@ std::string FileManager::resolvePath(const std::string& path) const {
 // Utility: Find a file/directory entry
 const FileEntry* FileManager::findEntry(const std::string& path) const {
     auto resolvedPath = resolvePath(path);
+    std::cout << resolvedPath << std::endl;
     return fileTable.getEntry(resolvedPath);
 }
 
@@ -89,8 +90,6 @@ void FileManager::createFile(const std::string& path, size_t size) {
     std::string resolvedPath = resolvePath(path);
     if (findEntry(resolvedPath)) throw std::runtime_error("File already exists.");
 
-    
-
     // Allocate required blocks
     size_t numBlocks = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
     std::vector<size_t> blocks;
@@ -102,6 +101,9 @@ void FileManager::createFile(const std::string& path, size_t size) {
     // Create the file entry
     FileEntry entry(resolvedPath, FileType::File, size, blocks);
     fileTable.addEntry(entry);
+
+    std::cout << "Created File Entry: " << resolvedPath 
+              << ", Type: " << (entry.type == FileType::File ? "File" : "Directory") << std::endl;
 }
 
 // Create a directory
@@ -150,7 +152,40 @@ void FileManager::deleteDirectory(const std::string& path, bool recursive) {
     fileTable.removeEntry(path); // Use local fileTable
 }
 
-// List directory contents
+std::vector<std::string> FileManager::listDirectory(const std::string& path) const {
+    const auto* entry = findEntry(path);
+    if (!entry) throw std::runtime_error("Directory does not exist.");
+    if (entry->type != FileType::Directory) throw std::runtime_error("Path is not a directory.");
+
+    std::vector<std::string> contents;
+
+    // Ensure path always ends with a '/'
+    std::string basePath = path.back() == '/' ? path : path + '/';
+
+    for (const auto& [name, subEntry] : fileTable.getEntries()) {
+        if (name.find(basePath) == 0 && name != path) {
+            std::string relativePath = name.substr(basePath.size());
+            // Extract the first sub-directory or file from the relative path
+            size_t nextSlash = relativePath.find('/');
+            
+            // 🔥 If nextSlash is found, we have a directory or subdirectory (e.g., /folder/file.txt)
+            if (nextSlash != std::string::npos) {
+                relativePath = relativePath.substr(0, nextSlash);
+            }
+
+            // 🔥 Avoid duplicate entries
+            if (!relativePath.empty() && 
+                std::find(contents.begin(), contents.end(), relativePath) == contents.end()) {
+                contents.push_back(relativePath);
+            }
+        }
+    }
+
+    return contents;
+}
+
+/*
+// List directory contents ORIGINAL
 std::vector<std::string> FileManager::listDirectory(const std::string& path) const {
     const auto* entry = findEntry(path);
     if (!entry) throw std::runtime_error("Directory does not exist.");
@@ -163,7 +198,7 @@ std::vector<std::string> FileManager::listDirectory(const std::string& path) con
         }
     }
     return contents;
-}
+}*/
 
 // Get metadata
 const FileEntry* FileManager::getMetadata(const std::string& path) const {
@@ -233,6 +268,8 @@ void FileManager::writeFile(const std::string& path, const std::string& data, bo
 std::string FileManager::readFile(const std::string& path) const {
     const auto* entry = findEntry(path);
     if (!entry) throw std::runtime_error("File does not exist.");
+    std::cout << entry << std::endl;
+    std::cout << path << std::endl;
     if (entry->type != FileType::File) throw std::runtime_error("Path is not a file.");
 
     // Read the data block by block
@@ -259,80 +296,7 @@ void FileManager::openFile(const std::string& path) const {
     }
 }
 
-void FileManager::save(std::ofstream& outFile) const {
-    const auto& entries = fileTable.getEntries();
-    size_t fileCount = entries.size();
-    outFile.write(reinterpret_cast<const char*>(&fileCount), sizeof(fileCount));
-
-    for (const auto& [path, entry] : entries) {
-        size_t pathLength = path.size();
-        outFile.write(reinterpret_cast<const char*>(&pathLength), sizeof(pathLength));
-        outFile.write(path.c_str(), pathLength);
-        
-        // 🔥 Save the FileType (whether it's a File or Directory)
-        outFile.write(reinterpret_cast<const char*>(&entry.type), sizeof(entry.type));
-
-        outFile.write(reinterpret_cast<const char*>(&entry.size), sizeof(entry.size));
-
-        size_t blockCount = entry.blockIndices.size();
-        outFile.write(reinterpret_cast<const char*>(&blockCount), sizeof(blockCount));
-        for (size_t blockIndex : entry.blockIndices) {
-            outFile.write(reinterpret_cast<const char*>(&blockIndex), sizeof(blockIndex));
-        }
-    }
-}
-
-void FileManager::load(std::ifstream& inFile) {
-    size_t fileCount;
-    inFile.read(reinterpret_cast<char*>(&fileCount), sizeof(fileCount));
-
-    for (size_t i = 0; i < fileCount; ++i) {
-        size_t pathLength;
-        inFile.read(reinterpret_cast<char*>(&pathLength), sizeof(pathLength));
-
-        std::string path(pathLength, '\0');
-        inFile.read(&path[0], pathLength);
-
-        // 🔥 Read FileType (FileType::File or FileType::Directory)
-        FileType type;
-        inFile.read(reinterpret_cast<char*>(&type), sizeof(type));
-
-        size_t size;
-        inFile.read(reinterpret_cast<char*>(&size), sizeof(size));
-
-        std::vector<size_t> blocks;
-        size_t blockCount;
-        inFile.read(reinterpret_cast<char*>(&blockCount), sizeof(blockCount));
-        for (size_t j = 0; j < blockCount; ++j) {
-            size_t blockIndex;
-            inFile.read(reinterpret_cast<char*>(&blockIndex), sizeof(blockIndex));
-            blocks.push_back(blockIndex);
-        }
-
-        FileEntry entry(path, type, size, blocks);
-        fileTable.addEntry(entry);
-    }
-
-    // ✅ Ensure / exists and is a directory
-    const FileEntry* rootEntry = fileTable.getEntry("/");
-    std::cout << rootEntry << std::endl;
-    if (!rootEntry || rootEntry->type != FileType::Directory) {
-        std::cout << "Correcting type for root directory '/'" << std::endl;
-        if (rootEntry) fileTable.removeEntry("/");
-        FileEntry root("/", FileType::Directory, 0, {});
-        fileTable.addEntry(root);
-    }
-
-    /*// Debug File Table
-    std::cout << "File Table Entries After Load:" << std::endl;
-    for (const auto& [name, entry] : fileTable.getEntries()) {
-        std::cout << "Path: " << name 
-                  << ", Type: " << (entry.type == FileType::Directory ? "Directory" : "File") 
-                  << std::endl;
-    }*/
-}
-
-
+// Save file system metadata to a file
 /*void FileManager::save(std::ofstream& outFile) const {
     const auto& entries = fileTable.getEntries();
     size_t fileCount = entries.size();
@@ -351,8 +315,12 @@ void FileManager::load(std::ifstream& inFile) {
             outFile.write(reinterpret_cast<const char*>(&blockIndex), sizeof(blockIndex));
         }
     }
+
+    // 🔥 Save disk block contents
+    diskManager.save(outFile);
 }
 
+// Load file system metadata from a file
 void FileManager::load(std::ifstream& inFile) {
     size_t fileCount;
     inFile.read(reinterpret_cast<char*>(&fileCount), sizeof(fileCount));
@@ -380,28 +348,36 @@ void FileManager::load(std::ifstream& inFile) {
         fileTable.addEntry(entry);
     }
 
-    /*try {
-        FileEntry root("/", FileType::Directory, 0, {});
-        fileTable.addEntry(root);
-    } catch (const std::exception& e) {} 
+    // 🔥 Load disk block contents
+    diskManager.load(inFile);
 }*/
 
 
-
-// Save file system metadata to a file
-/*void FileManager::save(std::ofstream& outFile) const {
-    size_t fileCount = files.size();
+void FileManager::save(std::ofstream& outFile) const {
+    const auto& entries = fileTable.getEntries();
+    size_t fileCount = entries.size();
     outFile.write(reinterpret_cast<const char*>(&fileCount), sizeof(fileCount));
 
-    for (const auto& [path, size] : files) {
+    for (const auto& [path, entry] : entries) {
         size_t pathLength = path.size();
         outFile.write(reinterpret_cast<const char*>(&pathLength), sizeof(pathLength));
         outFile.write(path.c_str(), pathLength);
-        outFile.write(reinterpret_cast<const char*>(&size), sizeof(size));
+        
+        // Save the FileType (whether it's a File or Directory)
+        outFile.write(reinterpret_cast<const char*>(&entry.type), sizeof(entry.type));
+
+        outFile.write(reinterpret_cast<const char*>(&entry.size), sizeof(entry.size));
+
+        size_t blockCount = entry.blockIndices.size();
+        outFile.write(reinterpret_cast<const char*>(&blockCount), sizeof(blockCount));
+        for (size_t blockIndex : entry.blockIndices) {
+            outFile.write(reinterpret_cast<const char*>(&blockIndex), sizeof(blockIndex));
+        }
     }
+
+    diskManager.save(outFile);
 }
 
-// Load file system metadata from a file
 void FileManager::load(std::ifstream& inFile) {
     size_t fileCount;
     inFile.read(reinterpret_cast<char*>(&fileCount), sizeof(fileCount));
@@ -413,24 +389,33 @@ void FileManager::load(std::ifstream& inFile) {
         std::string path(pathLength, '\0');
         inFile.read(&path[0], pathLength);
 
+        // Read FileType (FileType::File or FileType::Directory)
+        FileType type;
+        inFile.read(reinterpret_cast<char*>(&type), sizeof(type));
+
         size_t size;
         inFile.read(reinterpret_cast<char*>(&size), sizeof(size));
 
-        files[path] = size;
+        std::vector<size_t> blocks;
+        size_t blockCount;
+        inFile.read(reinterpret_cast<char*>(&blockCount), sizeof(blockCount));
+        for (size_t j = 0; j < blockCount; ++j) {
+            size_t blockIndex;
+            inFile.read(reinterpret_cast<char*>(&blockIndex), sizeof(blockIndex));
+            blocks.push_back(blockIndex);
+        }
+
+        FileEntry entry(path, type, size, blocks);
+        fileTable.addEntry(entry);
+    }
+
+    // Ensure / exists and is a directory
+    const FileEntry* rootEntry = fileTable.getEntry("/");
+    std::cout << "Root entry" << rootEntry << std::endl;
+    if (!rootEntry || rootEntry->type != FileType::Directory) {
+        std::cout << "Correcting type for root directory '/'" << std::endl;
+        if (rootEntry) fileTable.removeEntry("/");
+        FileEntry root("/", FileType::Directory, 0, {});
+        fileTable.addEntry(root);
     }
 }
-
-/*void saveFileSystem(const FileManager& fileManager) {
-    std::ofstream outFile("filesystem.dat", std::ios::out | std::ios::binary);
-    fileManager.save(outFile);
-    outFile.close();
-}
-
-void loadFileSystem(FileManager& fileManager) {
-    std::ifstream inFile("filesystem.dat", std::ios::in | std::ios::binary);
-    if (inFile) {
-        fileManager.load(inFile);
-        inFile.close();
-    }
-}*/
-
