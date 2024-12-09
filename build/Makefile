@@ -117,6 +117,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named command_line
+
+# Build rule for target.
+command_line: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 command_line
+.PHONY : command_line
+
+# fast build rule for target.
+command_line/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/command_line.dir/build.make CMakeFiles/command_line.dir/build
+.PHONY : command_line/fast
+
+#=============================================================================
 # Target rules for targets named runTests
 
 # Build rule for target.
@@ -134,6 +147,7 @@ command_line.o: command_line.cpp.o
 
 # target to build an object file
 command_line.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/command_line.dir/build.make CMakeFiles/command_line.dir/command_line.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/command_line.cpp.o
 .PHONY : command_line.cpp.o
 
@@ -142,6 +156,7 @@ command_line.i: command_line.cpp.i
 
 # target to preprocess a source file
 command_line.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/command_line.dir/build.make CMakeFiles/command_line.dir/command_line.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/command_line.cpp.i
 .PHONY : command_line.cpp.i
 
@@ -150,6 +165,7 @@ command_line.s: command_line.cpp.s
 
 # target to generate assembly for a file
 command_line.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/command_line.dir/build.make CMakeFiles/command_line.dir/command_line.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/command_line.cpp.s
 .PHONY : command_line.cpp.s
 
@@ -158,6 +174,7 @@ disk_manager.o: disk_manager.cpp.o
 
 # target to build an object file
 disk_manager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/command_line.dir/build.make CMakeFiles/command_line.dir/disk_manager.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/disk_manager.cpp.o
 .PHONY : disk_manager.cpp.o
 
@@ -166,6 +183,7 @@ disk_manager.i: disk_manager.cpp.i
 
 # target to preprocess a source file
 disk_manager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/command_line.dir/build.make CMakeFiles/command_line.dir/disk_manager.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/disk_manager.cpp.i
 .PHONY : disk_manager.cpp.i
 
@@ -174,6 +192,7 @@ disk_manager.s: disk_manager.cpp.s
 
 # target to generate assembly for a file
 disk_manager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/command_line.dir/build.make CMakeFiles/command_line.dir/disk_manager.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/disk_manager.cpp.s
 .PHONY : disk_manager.cpp.s
 
@@ -182,6 +201,7 @@ file_manager.o: file_manager.cpp.o
 
 # target to build an object file
 file_manager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/command_line.dir/build.make CMakeFiles/command_line.dir/file_manager.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/file_manager.cpp.o
 .PHONY : file_manager.cpp.o
 
@@ -190,6 +210,7 @@ file_manager.i: file_manager.cpp.i
 
 # target to preprocess a source file
 file_manager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/command_line.dir/build.make CMakeFiles/command_line.dir/file_manager.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/file_manager.cpp.i
 .PHONY : file_manager.cpp.i
 
@@ -198,6 +219,7 @@ file_manager.s: file_manager.cpp.s
 
 # target to generate assembly for a file
 file_manager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/command_line.dir/build.make CMakeFiles/command_line.dir/file_manager.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/runTests.dir/build.make CMakeFiles/runTests.dir/file_manager.cpp.s
 .PHONY : file_manager.cpp.s
 
@@ -257,6 +279,7 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... command_line"
 	@echo "... runTests"
 	@echo "... command_line.o"
 	@echo "... command_line.i"

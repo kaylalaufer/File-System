@@ -52,6 +52,8 @@ std::vector<std::string> FileManager::tokenizePath(const std::string& path) cons
 
 // Utility: Resolve absolute paths
 std::string FileManager::resolvePath(const std::string& path) const {
+    if (path == "/") return "/";
+    
     std::vector<std::string> tokens = tokenizePath(path);
     std::vector<std::string> resolved;
 
@@ -257,6 +259,167 @@ void FileManager::openFile(const std::string& path) const {
     }
 }
 
+void FileManager::save(std::ofstream& outFile) const {
+    const auto& entries = fileTable.getEntries();
+    size_t fileCount = entries.size();
+    outFile.write(reinterpret_cast<const char*>(&fileCount), sizeof(fileCount));
+
+    for (const auto& [path, entry] : entries) {
+        size_t pathLength = path.size();
+        outFile.write(reinterpret_cast<const char*>(&pathLength), sizeof(pathLength));
+        outFile.write(path.c_str(), pathLength);
+        
+        // 🔥 Save the FileType (whether it's a File or Directory)
+        outFile.write(reinterpret_cast<const char*>(&entry.type), sizeof(entry.type));
+
+        outFile.write(reinterpret_cast<const char*>(&entry.size), sizeof(entry.size));
+
+        size_t blockCount = entry.blockIndices.size();
+        outFile.write(reinterpret_cast<const char*>(&blockCount), sizeof(blockCount));
+        for (size_t blockIndex : entry.blockIndices) {
+            outFile.write(reinterpret_cast<const char*>(&blockIndex), sizeof(blockIndex));
+        }
+    }
+}
+
+void FileManager::load(std::ifstream& inFile) {
+    size_t fileCount;
+    inFile.read(reinterpret_cast<char*>(&fileCount), sizeof(fileCount));
+
+    for (size_t i = 0; i < fileCount; ++i) {
+        size_t pathLength;
+        inFile.read(reinterpret_cast<char*>(&pathLength), sizeof(pathLength));
+
+        std::string path(pathLength, '\0');
+        inFile.read(&path[0], pathLength);
+
+        // 🔥 Read FileType (FileType::File or FileType::Directory)
+        FileType type;
+        inFile.read(reinterpret_cast<char*>(&type), sizeof(type));
+
+        size_t size;
+        inFile.read(reinterpret_cast<char*>(&size), sizeof(size));
+
+        std::vector<size_t> blocks;
+        size_t blockCount;
+        inFile.read(reinterpret_cast<char*>(&blockCount), sizeof(blockCount));
+        for (size_t j = 0; j < blockCount; ++j) {
+            size_t blockIndex;
+            inFile.read(reinterpret_cast<char*>(&blockIndex), sizeof(blockIndex));
+            blocks.push_back(blockIndex);
+        }
+
+        FileEntry entry(path, type, size, blocks);
+        fileTable.addEntry(entry);
+    }
+
+    // ✅ Ensure / exists and is a directory
+    const FileEntry* rootEntry = fileTable.getEntry("/");
+    std::cout << rootEntry << std::endl;
+    if (!rootEntry || rootEntry->type != FileType::Directory) {
+        std::cout << "Correcting type for root directory '/'" << std::endl;
+        if (rootEntry) fileTable.removeEntry("/");
+        FileEntry root("/", FileType::Directory, 0, {});
+        fileTable.addEntry(root);
+    }
+
+    /*// Debug File Table
+    std::cout << "File Table Entries After Load:" << std::endl;
+    for (const auto& [name, entry] : fileTable.getEntries()) {
+        std::cout << "Path: " << name 
+                  << ", Type: " << (entry.type == FileType::Directory ? "Directory" : "File") 
+                  << std::endl;
+    }*/
+}
+
+
+/*void FileManager::save(std::ofstream& outFile) const {
+    const auto& entries = fileTable.getEntries();
+    size_t fileCount = entries.size();
+    outFile.write(reinterpret_cast<const char*>(&fileCount), sizeof(fileCount));
+
+    for (const auto& [path, entry] : entries) {
+        size_t pathLength = path.size();
+        outFile.write(reinterpret_cast<const char*>(&pathLength), sizeof(pathLength));
+        outFile.write(path.c_str(), pathLength);
+        
+        outFile.write(reinterpret_cast<const char*>(&entry.size), sizeof(entry.size));
+
+        size_t blockCount = entry.blockIndices.size();
+        outFile.write(reinterpret_cast<const char*>(&blockCount), sizeof(blockCount));
+        for (size_t blockIndex : entry.blockIndices) {
+            outFile.write(reinterpret_cast<const char*>(&blockIndex), sizeof(blockIndex));
+        }
+    }
+}
+
+void FileManager::load(std::ifstream& inFile) {
+    size_t fileCount;
+    inFile.read(reinterpret_cast<char*>(&fileCount), sizeof(fileCount));
+
+    for (size_t i = 0; i < fileCount; ++i) {
+        size_t pathLength;
+        inFile.read(reinterpret_cast<char*>(&pathLength), sizeof(pathLength));
+
+        std::string path(pathLength, '\0');
+        inFile.read(&path[0], pathLength);
+
+        size_t size;
+        inFile.read(reinterpret_cast<char*>(&size), sizeof(size));
+
+        std::vector<size_t> blocks;
+        size_t blockCount;
+        inFile.read(reinterpret_cast<char*>(&blockCount), sizeof(blockCount));
+        for (size_t j = 0; j < blockCount; ++j) {
+            size_t blockIndex;
+            inFile.read(reinterpret_cast<char*>(&blockIndex), sizeof(blockIndex));
+            blocks.push_back(blockIndex);
+        }
+
+        FileEntry entry(path, FileType::File, size, blocks);
+        fileTable.addEntry(entry);
+    }
+
+    /*try {
+        FileEntry root("/", FileType::Directory, 0, {});
+        fileTable.addEntry(root);
+    } catch (const std::exception& e) {} 
+}*/
+
+
+
+// Save file system metadata to a file
+/*void FileManager::save(std::ofstream& outFile) const {
+    size_t fileCount = files.size();
+    outFile.write(reinterpret_cast<const char*>(&fileCount), sizeof(fileCount));
+
+    for (const auto& [path, size] : files) {
+        size_t pathLength = path.size();
+        outFile.write(reinterpret_cast<const char*>(&pathLength), sizeof(pathLength));
+        outFile.write(path.c_str(), pathLength);
+        outFile.write(reinterpret_cast<const char*>(&size), sizeof(size));
+    }
+}
+
+// Load file system metadata from a file
+void FileManager::load(std::ifstream& inFile) {
+    size_t fileCount;
+    inFile.read(reinterpret_cast<char*>(&fileCount), sizeof(fileCount));
+
+    for (size_t i = 0; i < fileCount; ++i) {
+        size_t pathLength;
+        inFile.read(reinterpret_cast<char*>(&pathLength), sizeof(pathLength));
+
+        std::string path(pathLength, '\0');
+        inFile.read(&path[0], pathLength);
+
+        size_t size;
+        inFile.read(reinterpret_cast<char*>(&size), sizeof(size));
+
+        files[path] = size;
+    }
+}
+
 /*void saveFileSystem(const FileManager& fileManager) {
     std::ofstream outFile("filesystem.dat", std::ios::out | std::ios::binary);
     fileManager.save(outFile);
@@ -269,5 +432,5 @@ void loadFileSystem(FileManager& fileManager) {
         fileManager.load(inFile);
         inFile.close();
     }
-}
-*/
+}*/
+

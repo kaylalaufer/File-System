@@ -60,6 +60,9 @@ void startCLI(FileManager& fileManager) {
                 if (size >= 1048576) {
                     std::cerr << "File size is too large. Please provide a number between 1 and 1048576." << std::endl;
                     continue;
+                } else if (size <= 0) {
+                    std::cerr << "Error: File size must be a positive number." << std::endl;
+                    continue;
                 }
 
                 fileManager.createFile(path, size);
@@ -115,7 +118,53 @@ void startCLI(FileManager& fileManager) {
     }
 }
 #ifndef TEST_BUILD
+int main() {
+    const std::string diskName = "cli_disk.dat";
+    const std::string fileSystemDataFile = "filesystem.dat";
+
+    DiskManager diskManager(diskName, 256);
+    FileManager fileManager(diskManager);
+
+    // Load existing file system metadata
+    std::ifstream inFile(fileSystemDataFile, std::ios::binary);
+    if (inFile) {
+        fileManager.load(inFile);
+        inFile.close();
+    }
+
+    startCLI(fileManager);
+
+    // Save file system metadata on exit
+    std::ofstream outFile(fileSystemDataFile, std::ios::binary);
+    fileManager.save(outFile);
+    outFile.close();
+
+    return 0;
+}
+#endif
 /*int main() {
+    const std::string diskName = "cli_disk.dat";
+    const std::string fileSystemDataFile = "filesystem.dat";
+    DiskManager diskManager(diskName, 256);
+    FileManager fileManager(diskManager);
+
+    // Load existing file system metadata
+    std::ifstream inFile(fileSystemDataFile, std::ios::binary);
+    if (inFile) {
+        fileManager.load(inFile);
+        inFile.close();
+    }
+
+    startCLI(fileManager);
+
+    // Save file system metadata on exit
+    std::ofstream outFile(fileSystemDataFile, std::ios::binary);
+    fileManager.save(outFile);
+    outFile.close();
+
+    return 0;
+    
+    
     const std::string diskName = "cli_disk.dat";
     const size_t numBlocks = 256;
 
@@ -129,4 +178,3 @@ void startCLI(FileManager& fileManager) {
 
     return 0;
 }*/
-#endif

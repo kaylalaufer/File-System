@@ -1,7 +1,5 @@
 #include "disk_manager.h"
-#include <fstream>
-#include <stdexcept>
-#include <cstring>
+
 
 // Bitmap Implementation
 Bitmap::Bitmap(size_t numBlocks) : bitmap(numBlocks, true) {}
@@ -27,7 +25,29 @@ const std::vector<bool>& Bitmap::getBitmap() const {
 
 // DiskManager Implementation
 DiskManager::DiskManager(const std::string& diskName, size_t numBlocks)
-    : diskName(diskName), numBlocks(numBlocks), bitmap(numBlocks) {}
+    : diskName(diskName), numBlocks(numBlocks), bitmap(numBlocks) {
+    // 🔥 Open the disk file for reading and writing
+    diskFile.open(diskName, std::ios::in | std::ios::out | std::ios::binary);
+    
+    if (!diskFile) {
+        // 🔥 If the disk file doesn't exist, create it
+        std::cout << "Creating new disk: " << diskName << std::endl;
+        diskFile.clear();
+        diskFile.open(diskName, std::ios::out | std::ios::binary); // Create file
+        diskFile.close();
+        diskFile.open(diskName, std::ios::in | std::ios::out | std::ios::binary); // Re-open in read/write mode
+
+        // 🔥 Initialize the disk with empty blocks
+        std::string emptyBlock(BLOCK_SIZE, '\0');
+        for (size_t i = 0; i < numBlocks; ++i) {
+            diskFile.write(emptyBlock.c_str(), BLOCK_SIZE);
+        }
+    }
+
+    if (!diskFile) {
+        throw std::runtime_error("Failed to open disk file for read/write");
+    }
+}
 
 void DiskManager::writeBlock(size_t blockIndex, const std::string& data) {
     if (data.size() > BLOCK_SIZE) {
@@ -40,6 +60,7 @@ void DiskManager::writeBlock(size_t blockIndex, const std::string& data) {
 
     // Open disk file
     std::fstream disk(diskName, std::ios::in | std::ios::out | std::ios::binary);
+    std::cout << " Name: " << diskName << std::endl;
     if (!disk) {
         throw std::runtime_error("Failed to open disk file for writing");
     }
@@ -65,6 +86,7 @@ std::string DiskManager::readBlock(size_t blockIndex) const {
     }
 
     std::ifstream disk(diskName, std::ios::binary);
+    std::cout << " Name: " << diskName << std::endl;
     if (!disk) {
         throw std::runtime_error("Failed to open disk file for reading");
     }

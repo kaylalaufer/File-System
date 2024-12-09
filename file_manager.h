@@ -8,6 +8,7 @@
 #include <regex>
 #include <sstream>
 #include <iostream>
+#include <fstream>
 
 
 // Utility function to check if a string is a number
@@ -59,6 +60,9 @@ public:
     void writeFile(const std::string& path, const std::string& data, bool append);
     std::string readFile(const std::string& path) const;
     void openFile(const std::string& path) const;
+
+    void save(std::ofstream& outFile) const; // Save file system state
+    void load(std::ifstream& inFile);        // Load file system state
 
 private:
     DiskManager& diskManager;
