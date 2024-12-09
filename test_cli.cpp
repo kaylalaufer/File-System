@@ -37,6 +37,7 @@ private:
     std::streambuf* originalCerr;
 };
 
+// Test Helper Function
 TEST(IOTestHelperTest, CapturesCoutAndCerr) {
     IOTestHelper ioHelper("");
     std::cout << "This is std::cout" << std::endl;
@@ -48,6 +49,22 @@ TEST(IOTestHelperTest, CapturesCoutAndCerr) {
 
     EXPECT_NE(output.find("This is std::cout"), std::string::npos);
     EXPECT_NE(output.find("This is std::cerr"), std::string::npos);
+}
+
+/* CREATE FILE TESTS */
+
+// Create file with valid path and size
+TEST(CommandLineTest, CreateFileWithValidPathAndSize) {
+    DiskManager diskManager("test_disk.dat", 256);
+    FileManager fileManager(diskManager);
+
+    IOTestHelper ioHelper("create_file /validfile.txt 50\nexit\n");
+
+    startCLI(fileManager);
+
+    std::string output = ioHelper.getOutput();
+    EXPECT_TRUE(output.find("File created at /validfile.txt") != std::string::npos)
+        << "Captured output: " << output;
 }
 
 // Create file with negative size
@@ -98,9 +115,6 @@ TEST(CommandLineTest, CreateFileThatAlreadyExists) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
 
-    // Create file manually before running the CLI
-    //fileManager.createFile("/example.txt", 100);
-
     IOTestHelper ioHelper("create_file /example.txt 100\ncreate_file /example.txt 100\nexit\n");
 
     startCLI(fileManager);
@@ -109,6 +123,24 @@ TEST(CommandLineTest, CreateFileThatAlreadyExists) {
     EXPECT_TRUE(output.find("File already exists") != std::string::npos)
         << "Captured output: " << output;
 }
+
+// Create file with max unsigned long size
+TEST(CommandLineTest, CreateFileWithMaxUnsignedLongSize) {
+    DiskManager diskManager("test_disk.dat", 256);
+    FileManager fileManager(diskManager);
+
+    IOTestHelper ioHelper("create_file /largefile.txt 4294967295\nexit\n");
+
+    startCLI(fileManager);
+
+    std::string output = ioHelper.getOutput();
+    EXPECT_TRUE(output.find("File size is too large.") != std::string::npos)
+        << "Captured output: " << output;
+}
+
+
+/* CREATE DIRECTORY TESTS */
+
 
 // Create directory with invalid path
 TEST(CommandLineTest, CreateDirectoryWithInvalidPath) {

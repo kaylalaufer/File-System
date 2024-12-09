@@ -45,16 +45,21 @@ void startCLI(FileManager& fileManager) {
                 } else if (sizeStr[0] == '-') { // Check if the size is valid
                     std::cerr << "Error: File size must be a positive number." << std::endl;
                     continue;
-                } else if (!isNumber(sizeStr)) {
+                } else if (!isSizeNumber(sizeStr)) {
                     std::cerr << "Invalid size: '" << sizeStr << "'. Please provide a valid number." << std::endl;
                     continue;
-                }
+                } 
 
                 // Validate the size
                 try {
                     size = std::stoul(sizeStr); 
                 } catch (const std::exception& e) {
                     std::cerr << "Invalid size: '" << sizeStr << "'. Please provide a valid number." << std::endl;
+                } 
+
+                if (size >= 1048576) {
+                    std::cerr << "File size is too large. Please provide a number between 1 and 1048576." << std::endl;
+                    continue;
                 }
 
                 fileManager.createFile(path, size);
@@ -118,8 +123,9 @@ void startCLI(FileManager& fileManager) {
     DiskManager diskManager(diskName, numBlocks);
     FileManager fileManager(diskManager);
 
-    // Start the CLI
+    loadFileSystem(fileManager);
     startCLI(fileManager);
+    saveFileSystem(fileManager);
 
     return 0;
 }*/

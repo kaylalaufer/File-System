@@ -85,9 +85,10 @@ void FileManager::createFile(const std::string& path, size_t size) {
     if (!isValidName(path)) throw std::invalid_argument("Invalid file name.");
 
     std::string resolvedPath = resolvePath(path);
-    std::cout << "IN FILE MANAGER" << std::endl;
     if (findEntry(resolvedPath)) throw std::runtime_error("File already exists.");
-    std::cout << "AFTER ERROR SHOULD BE THROWN" << std::endl;
+
+    
+
     // Allocate required blocks
     size_t numBlocks = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
     std::vector<size_t> blocks;
@@ -255,3 +256,18 @@ void FileManager::openFile(const std::string& path) const {
         std::cout << "Contents of " << path << ":\n" << content << std::endl;
     }
 }
+
+/*void saveFileSystem(const FileManager& fileManager) {
+    std::ofstream outFile("filesystem.dat", std::ios::out | std::ios::binary);
+    fileManager.save(outFile);
+    outFile.close();
+}
+
+void loadFileSystem(FileManager& fileManager) {
+    std::ifstream inFile("filesystem.dat", std::ios::in | std::ios::binary);
+    if (inFile) {
+        fileManager.load(inFile);
+        inFile.close();
+    }
+}
+*/

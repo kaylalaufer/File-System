@@ -66,7 +66,8 @@ protected:
     FileManager* fileManager;
 
     void SetUp() override {
-        const std::string testDisk = "test_disk_" + std::string(::testing::UnitTest::GetInstance()->current_test_info()->test_case_name()) + ".dat";
+        //const std::string testDisk = "test_disk_" + std::string(::testing::UnitTest::GetInstance()->current_test_info()->test_case_name()) + ".dat";
+        const std::string testDisk = "test_file_manager.dat";
         initializeDiskFile(testDisk);
         diskManager = new DiskManager(testDisk, MAX_BLOCKS);
         fileManager = new FileManager(*diskManager);
@@ -76,6 +77,7 @@ protected:
         delete fileManager;
         delete diskManager;
         std::remove(TEST_DISK.c_str());
+        std::remove("test_file_manager.dat");
     }
 };
 
