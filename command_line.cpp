@@ -156,8 +156,6 @@ int main() {
     DiskManager diskManager(diskName, 256);
     FileManager fileManager(diskManager);
 
-    
-
     // 🔥 Load existing file system metadata
     std::ifstream fsFile(fileSystemDataFile, std::ios::binary);
     if (fsFile) {
@@ -165,8 +163,9 @@ int main() {
         fileManager.load(fsFile);
         fsFile.close();
     }
-
     
+    // 🔥 Initialize the file system
+    fileManager.initializeFileSystem();
 
     startCLI(fileManager);
 

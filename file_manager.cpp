@@ -4,6 +4,25 @@
 FileManager::FileManager(DiskManager& diskManager) 
     : diskManager(diskManager), fileTable() {}
 
+// Initialize Root Directory
+void FileManager::initializeFileSystem() {
+    std::cout << "Initializing file system..." << std::endl;
+
+    try {
+        // 🔥 Ensure the root directory '/' exists
+        const FileEntry* rootEntry = findEntry("/");
+        if (!rootEntry) {
+            std::cout << "Root directory '/' not found. Creating root directory." << std::endl;
+            FileEntry root("/", FileType::Directory, 0, {});
+            fileTable.addEntry(root);
+        } else {
+            std::cout << "Root directory '/' already exists." << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error creating root directory: " << e.what() << std::endl;
+    }
+}
+
 FileEntry::FileEntry(std::string name, FileType type, size_t size, const std::vector<size_t>& blocks)
     : name(std::move(name)), type(type), size(size), blockIndices(blocks) {}
 
