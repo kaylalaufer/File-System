@@ -6,18 +6,13 @@ FileManager::FileManager(DiskManager& diskManager)
 
 // Initialize Root Directory
 void FileManager::initializeFileSystem() {
-    std::cout << "Initializing file system..." << std::endl;
-
     try {
-        // 🔥 Ensure the root directory '/' exists
+        //  Ensure the root directory '/' exists
         const FileEntry* rootEntry = findEntry("/");
         if (!rootEntry) {
-            std::cout << "Root directory '/' not found. Creating root directory." << std::endl;
             FileEntry root("/", FileType::Directory, 0, {});
             fileTable.addEntry(root);
-        } else {
-            std::cout << "Root directory '/' already exists." << std::endl;
-        }
+        } else {}
     } catch (const std::exception& e) {
         std::cerr << "Error creating root directory: " << e.what() << std::endl;
     }
@@ -94,7 +89,6 @@ std::string FileManager::resolvePath(const std::string& path) const {
 // Utility: Find a file/directory entry
 const FileEntry* FileManager::findEntry(const std::string& path) const {
     auto resolvedPath = resolvePath(path);
-    std::cout << resolvedPath << std::endl;
     return fileTable.getEntry(resolvedPath);
 }
 
@@ -116,7 +110,6 @@ void FileManager::ensureParentDirectories(const std::string& path) {
 
         // If the directory does not exist, create it
         if (!entry) {
-            std::cout << "Creating missing directory: " << currentPath << std::endl;
             createDirectory(currentPath);
         } else if (entry->type != FileType::Directory) {
             throw std::runtime_error("Path conflict: " + currentPath + " exists but is not a directory.");
@@ -148,9 +141,6 @@ void FileManager::createFile(const std::string& path, size_t size) {
     // Create the file entry
     FileEntry entry(resolvedPath, FileType::File, size, blocks);
     fileTable.addEntry(entry);
-
-    std::cout << "Created File Entry: " << resolvedPath 
-              << ", Type: " << (entry.type == FileType::File ? "File" : "Directory") << std::endl;
 }
 
 void FileManager::createDirectory(const std::string& path) {
@@ -166,45 +156,7 @@ void FileManager::createDirectory(const std::string& path) {
     // Create directory entry with zero blocks
     FileEntry entry(resolvedPath, FileType::Directory, 0, {});
     fileTable.addEntry(entry);
-
-    std::cout << "Created Directory Entry: " << resolvedPath << std::endl;
 }
-
-
-// Create a file
-/*void FileManager::createFile(const std::string& path, size_t size) {
-    if (!isValidName(path)) throw std::invalid_argument("Invalid file name.");
-
-    std::string resolvedPath = resolvePath(path);
-    if (findEntry(resolvedPath)) throw std::runtime_error("File already exists.");
-
-    // Allocate required blocks
-    size_t numBlocks = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    std::vector<size_t> blocks;
-    for (size_t i = 0; i < numBlocks; ++i) {
-        size_t blockIndex = diskManager.allocateBlock();
-        blocks.push_back(blockIndex);
-    }
-
-    // Create the file entry
-    FileEntry entry(resolvedPath, FileType::File, size, blocks);
-    fileTable.addEntry(entry);
-
-    std::cout << "Created File Entry: " << resolvedPath 
-              << ", Type: " << (entry.type == FileType::File ? "File" : "Directory") << std::endl;
-}
-
-// Create a directory
-void FileManager::createDirectory(const std::string& path) {
-    if (!isValidName(path)) throw std::invalid_argument("Invalid directory name.");
-
-    auto resolvedPath = resolvePath(path);
-    if (findEntry(resolvedPath)) throw std::runtime_error("Directory already exists.");
-
-    // Create directory entry with zero blocks
-    FileEntry entry(resolvedPath, FileType::Directory, 0, {});
-    fileTable.addEntry(entry);
-}*/
 
 // Delete a file
 void FileManager::deleteFile(const std::string& path) {
@@ -257,12 +209,12 @@ std::vector<std::string> FileManager::listDirectory(const std::string& path) con
             // Extract the first sub-directory or file from the relative path
             size_t nextSlash = relativePath.find('/');
             
-            // 🔥 If nextSlash is found, we have a directory or subdirectory (e.g., /folder/file.txt)
+            //  If nextSlash is found, we have a directory or subdirectory (e.g., /folder/file.txt)
             if (nextSlash != std::string::npos) {
                 relativePath = relativePath.substr(0, nextSlash);
             }
 
-            // 🔥 Avoid duplicate entries
+            //  Avoid duplicate entries
             if (!relativePath.empty() && 
                 std::find(contents.begin(), contents.end(), relativePath) == contents.end()) {
                 contents.push_back(relativePath);
@@ -272,22 +224,6 @@ std::vector<std::string> FileManager::listDirectory(const std::string& path) con
 
     return contents;
 }
-
-/*
-// List directory contents ORIGINAL
-std::vector<std::string> FileManager::listDirectory(const std::string& path) const {
-    const auto* entry = findEntry(path);
-    if (!entry) throw std::runtime_error("Directory does not exist.");
-    if (entry->type != FileType::Directory) throw std::runtime_error("Path is not a directory.");
-
-    std::vector<std::string> contents;
-    for (const auto& [name, subEntry] : fileTable.getEntries()) { // Use local fileTable
-        if (name.find(path) == 0 && name != path) {
-            contents.push_back(name);
-        }
-    }
-    return contents;
-}*/
 
 // Get metadata
 const FileEntry* FileManager::getMetadata(const std::string& path) const {
@@ -357,8 +293,6 @@ void FileManager::writeFile(const std::string& path, const std::string& data, bo
 std::string FileManager::readFile(const std::string& path) const {
     const auto* entry = findEntry(path);
     if (!entry) throw std::runtime_error("File does not exist.");
-    std::cout << entry << std::endl;
-    std::cout << path << std::endl;
     if (entry->type != FileType::File) throw std::runtime_error("Path is not a file.");
 
     // Read the data block by block
@@ -384,62 +318,6 @@ void FileManager::openFile(const std::string& path) const {
         std::cout << "Contents of " << path << ":\n" << content << std::endl;
     }
 }
-
-// Save file system metadata to a file
-/*void FileManager::save(std::ofstream& outFile) const {
-    const auto& entries = fileTable.getEntries();
-    size_t fileCount = entries.size();
-    outFile.write(reinterpret_cast<const char*>(&fileCount), sizeof(fileCount));
-
-    for (const auto& [path, entry] : entries) {
-        size_t pathLength = path.size();
-        outFile.write(reinterpret_cast<const char*>(&pathLength), sizeof(pathLength));
-        outFile.write(path.c_str(), pathLength);
-        
-        outFile.write(reinterpret_cast<const char*>(&entry.size), sizeof(entry.size));
-
-        size_t blockCount = entry.blockIndices.size();
-        outFile.write(reinterpret_cast<const char*>(&blockCount), sizeof(blockCount));
-        for (size_t blockIndex : entry.blockIndices) {
-            outFile.write(reinterpret_cast<const char*>(&blockIndex), sizeof(blockIndex));
-        }
-    }
-
-    // 🔥 Save disk block contents
-    diskManager.save(outFile);
-}
-
-// Load file system metadata from a file
-void FileManager::load(std::ifstream& inFile) {
-    size_t fileCount;
-    inFile.read(reinterpret_cast<char*>(&fileCount), sizeof(fileCount));
-
-    for (size_t i = 0; i < fileCount; ++i) {
-        size_t pathLength;
-        inFile.read(reinterpret_cast<char*>(&pathLength), sizeof(pathLength));
-
-        std::string path(pathLength, '\0');
-        inFile.read(&path[0], pathLength);
-
-        size_t size;
-        inFile.read(reinterpret_cast<char*>(&size), sizeof(size));
-
-        std::vector<size_t> blocks;
-        size_t blockCount;
-        inFile.read(reinterpret_cast<char*>(&blockCount), sizeof(blockCount));
-        for (size_t j = 0; j < blockCount; ++j) {
-            size_t blockIndex;
-            inFile.read(reinterpret_cast<char*>(&blockIndex), sizeof(blockIndex));
-            blocks.push_back(blockIndex);
-        }
-
-        FileEntry entry(path, FileType::File, size, blocks);
-        fileTable.addEntry(entry);
-    }
-
-    // 🔥 Load disk block contents
-    diskManager.load(inFile);
-}*/
 
 
 void FileManager::save(std::ofstream& outFile) const {
@@ -500,15 +378,117 @@ void FileManager::load(std::ifstream& inFile) {
 
     // Ensure / exists and is a directory
     const FileEntry* rootEntry = fileTable.getEntry("/");
-    std::cout << "Root entry" << rootEntry << std::endl;
     if (!rootEntry || rootEntry->type != FileType::Directory) {
-        std::cout << "Correcting type for root directory '/'" << std::endl;
         if (rootEntry) fileTable.removeEntry("/");
         FileEntry root("/", FileType::Directory, 0, {});
         fileTable.addEntry(root);
     }
 
-    // 🔥 Load DiskManager state
+    //  Load DiskManager state
     diskManager.load(inFile);
 
+}
+
+void FileManager::moveFile(const std::string& sourcePath, const std::string& destinationPath) {
+    std::string srcResolved = resolvePath(sourcePath);
+    std::string destResolved = resolvePath(destinationPath);
+
+    if (srcResolved == destResolved) {
+        throw std::runtime_error("Source and destination paths are the same.");
+    }
+
+    const FileEntry* sourceEntry = findEntry(srcResolved);
+    if (!sourceEntry) {
+        throw std::runtime_error("Source file does not exist: " + srcResolved);
+    }
+
+    if (sourceEntry->type != FileType::File) {
+        throw std::runtime_error("Source is not a file: " + srcResolved);
+    }
+
+    //  Check if the parent directory exists before creating it
+    std::string parentPath = resolvePath(destResolved.substr(0, destResolved.find_last_of('/')));
+    const FileEntry* parentEntry = findEntry(parentPath);
+    if (!parentEntry) {
+        throw std::runtime_error("Parent directory does not exist: " + parentPath);
+    }
+
+    // Read the file data from the source path
+    std::string fileData = readFile(srcResolved);
+
+    // Create a new file at the destination and write the data
+    createFile(destResolved, sourceEntry->size);
+    writeFile(destResolved, fileData, false); // Write all the file data
+
+    // Remove source entry from file table
+    fileTable.removeEntry(srcResolved);
+}
+
+
+void FileManager::moveDirectory(const std::string& sourcePath, const std::string& destinationPath) {
+    std::string srcResolved = resolvePath(sourcePath);
+    std::string destResolved = resolvePath(destinationPath);
+
+    if (srcResolved == destResolved) {
+        throw std::runtime_error("Source and destination paths are the same.");
+    }
+
+    if (destinationPath.find(sourcePath) == 0) {
+        throw std::runtime_error("Cannot move a directory into itself: " + destinationPath);
+    }
+
+    const FileEntry* sourceEntry = findEntry(srcResolved);
+    if (!sourceEntry) {
+        throw std::runtime_error("Source directory does not exist: " + srcResolved);
+    }
+
+    if (sourceEntry->type != FileType::Directory) {
+        throw std::runtime_error("Source is not a directory: " + srcResolved);
+    }
+
+    //  Create the destination directory entry before moving contents
+    FileEntry newDirEntry = *sourceEntry;
+    newDirEntry.name = destResolved;
+    fileTable.addEntry(newDirEntry); // Add the new directory entry before moving contents
+
+    //  Recursively move subdirectories and files
+    std::vector<std::string> contents = listDirectory(srcResolved);
+    for (const std::string& item : contents) {
+        std::string srcItemPath = srcResolved + "/" + item;
+        std::string destItemPath = destResolved + "/" + item;
+
+        const FileEntry* entry = findEntry(srcItemPath);
+        if (!entry) continue;
+
+        if (entry->type == FileType::File) {
+            moveFile(srcItemPath, destItemPath);
+        } else if (entry->type == FileType::Directory) {
+            moveDirectory(srcItemPath, destItemPath);
+        }
+    }
+
+    //  Remove the source directory from fileTable
+    deleteFile(srcResolved);
+}
+
+void FileManager::renamePath(const std::string& sourcePath, const std::string& newName) {
+    std::string srcResolved = resolvePath(sourcePath);
+    const FileEntry* sourceEntry = findEntry(srcResolved);
+    if (!sourceEntry) {
+        throw std::runtime_error("Source path does not exist: " + srcResolved);
+    }
+
+    std::string parentPath = srcResolved.substr(0, srcResolved.find_last_of('/'));
+    std::string destResolved = parentPath + "/" + newName;
+
+    if (findEntry(destResolved)) {
+        throw std::runtime_error("File or directory with the new name already exists: " + destResolved);
+    }
+
+    fileTable.removeEntry(srcResolved);
+    FileEntry newEntry = *sourceEntry;
+    newEntry.name = destResolved;
+    fileTable.addEntry(newEntry);
+
+    //std::cout << "Renamed " << sourcePath << " to " << newName << std::endl;
 }
