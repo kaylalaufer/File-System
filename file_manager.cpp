@@ -1,6 +1,6 @@
 #include "file_manager.h"
 
-// Constructor
+// FileManager Constructor
 FileManager::FileManager(DiskManager& diskManager) 
     : diskManager(diskManager), fileTable() {}
 
@@ -18,9 +18,11 @@ void FileManager::initializeFileSystem() {
     }
 }
 
+//FileEntry Constructor
 FileEntry::FileEntry(std::string name, FileType type, size_t size, const std::vector<size_t>& blocks)
     : name(std::move(name)), type(type), size(size), blockIndices(blocks) {}
 
+// Adds Entry 
 void FileTable::addEntry(const FileEntry& entry) {
     if (entries.find(entry.name) != entries.end()) {
         throw std::runtime_error("File entry already exists");
@@ -28,10 +30,12 @@ void FileTable::addEntry(const FileEntry& entry) {
     entries[entry.name] = entry;
 }
 
+// Delete file helper
 bool FileTable::removeEntry(const std::string& name) {
     return entries.erase(name) > 0;
 }
 
+// Get Entry using path
 const FileEntry* FileTable::getEntry(const std::string& name) const {
     auto it = entries.find(name);
     if (it == entries.end()) {
@@ -40,6 +44,7 @@ const FileEntry* FileTable::getEntry(const std::string& name) const {
     return &it->second;
 }
 
+// Return all Entries
 const std::unordered_map<std::string, FileEntry>& FileTable::getEntries() const {
     return entries;
 }
@@ -66,7 +71,7 @@ std::vector<std::string> FileManager::tokenizePath(const std::string& path) cons
 
 // Utility: Resolve absolute paths
 std::string FileManager::resolvePath(const std::string& path) const {
-    if (path == "/") return "/";
+    if (path == "/") return "/"; // Root
     
     std::vector<std::string> tokens = tokenizePath(path);
     std::vector<std::string> resolved;
@@ -92,11 +97,10 @@ const FileEntry* FileManager::findEntry(const std::string& path) const {
     return fileTable.getEntry(resolvedPath);
 }
 
+// Is valid number
 bool isNumber(const std::string& str) {
     return !str.empty() && std::all_of(str.begin(), str.end(), ::isdigit);
 }
-
-// file_manager.cpp
 
 // Ensure that all parent directories exist for a given path
 void FileManager::ensureParentDirectories(const std::string& path) {
@@ -120,6 +124,7 @@ void FileManager::ensureParentDirectories(const std::string& path) {
     }
 }
 
+// Create file, default size is 100 bytes
 void FileManager::createFile(const std::string& path, size_t size) {
     if (!isValidName(path)) throw std::invalid_argument("Invalid file name.");
 
@@ -143,6 +148,7 @@ void FileManager::createFile(const std::string& path, size_t size) {
     fileTable.addEntry(entry);
 }
 
+// Create directory
 void FileManager::createDirectory(const std::string& path) {
     if (!isValidName(path)) throw std::invalid_argument("Invalid directory name.");
 
@@ -178,8 +184,12 @@ void FileManager::deleteDirectory(const std::string& path, bool recursive) {
     if (!entry) throw std::runtime_error("Directory does not exist.");
     if (entry->type != FileType::Directory) throw std::runtime_error("Path is not a directory.");
 
-    for (const auto& [name, subEntry] : fileTable.getEntries()) { // Use local fileTable
-        if (name.find(path) == 0 && name != path) {
+    // Get a snapshot of entries (to avoid modifying fileTable during iteration)
+    std::vector<std::pair<std::string, FileEntry>> snapshot(fileTable.getEntries().begin(), fileTable.getEntries().end());
+
+    for (const auto& [name, subEntry] : snapshot) { 
+        // Check if it's a child of the directory
+        if (name.find(path + "/") == 0) { // Match sub-paths (not the parent itself)
             if (!recursive) throw std::runtime_error("Directory is not empty.");
             if (subEntry.type == FileType::File) {
                 deleteFile(name);
@@ -188,10 +198,13 @@ void FileManager::deleteDirectory(const std::string& path, bool recursive) {
             }
         }
     }
-    
-    fileTable.removeEntry(path); // Use local fileTable
+
+    // Delete the parent directory itself
+    bool success = fileTable.removeEntry(path);
+    if (!success) throw std::runtime_error("Failed to remove directory metadata for " + path);
 }
 
+// List everything in a directory
 std::vector<std::string> FileManager::listDirectory(const std::string& path) const {
     const auto* entry = findEntry(path);
 
@@ -288,7 +301,6 @@ void FileManager::writeFile(const std::string& path, const std::string& data, bo
     }
 }
 
-
 // Read data from a file
 std::string FileManager::readFile(const std::string& path) const {
     const auto* entry = findEntry(path);
@@ -306,23 +318,12 @@ std::string FileManager::readFile(const std::string& path) const {
     return data;
 }
 
-void FileManager::openFile(const std::string& path) const {
-    const auto* entry = findEntry(path);
-    if (!entry) throw std::runtime_error("File does not exist.");
-    if (entry->type != FileType::File) throw std::runtime_error("Path is not a file.");
-
-    std::string content = readFile(path);
-    if (content.empty()) {
-        std::cout << "File is empty." << std::endl;
-    } else {
-        std::cout << "Contents of " << path << ":\n" << content << std::endl;
-    }
-}
-
-
+// Save all the files and directories for persistence 
 void FileManager::save(std::ofstream& outFile) const {
     const auto& entries = fileTable.getEntries();
     size_t fileCount = entries.size();
+
+    // Save everything to the outFile
     outFile.write(reinterpret_cast<const char*>(&fileCount), sizeof(fileCount));
 
     for (const auto& [path, entry] : entries) {
@@ -345,6 +346,7 @@ void FileManager::save(std::ofstream& outFile) const {
     diskManager.save(outFile);
 }
 
+// Load all the data into memory
 void FileManager::load(std::ifstream& inFile) {
     size_t fileCount;
     inFile.read(reinterpret_cast<char*>(&fileCount), sizeof(fileCount));
@@ -386,9 +388,9 @@ void FileManager::load(std::ifstream& inFile) {
 
     //  Load DiskManager state
     diskManager.load(inFile);
-
 }
 
+// Move and/or rename file
 void FileManager::moveFile(const std::string& sourcePath, const std::string& destinationPath) {
     std::string srcResolved = resolvePath(sourcePath);
     std::string destResolved = resolvePath(destinationPath);

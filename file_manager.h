@@ -66,8 +66,6 @@ public:
     void writeFile(const std::string& path, const std::string& data, bool append);
     std::string readFile(const std::string& path) const;
     
-    void openFile(const std::string& path) const;
-
     void moveFile(const std::string& sourcePath, const std::string& destinationPath);
 
     void save(std::ofstream& outFile) const; // Save file system state

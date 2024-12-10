@@ -1,15 +1,12 @@
-#include <iostream>
-#include <sstream>
-#include <regex>
-#include "file_manager.h"
 #include "command_line.h"
 
-
+// Validate size number
 bool isSizeNumber(const std::string& str) {
     if (str.empty()) return false;
     return std::all_of(str.begin(), str.end(), ::isdigit);
 }
 
+// Command Line Interface
 void startCLI(FileManager& fileManager) {
     std::cout << "Welcome to the FileManager CLI!" << std::endl;
     std::cout << "Type 'help' to see available commands." << std::endl;
@@ -40,7 +37,7 @@ void startCLI(FileManager& fileManager) {
                 size_t size;
                 iss >> path >> sizeStr;
 
-                // Check if the path or size is empty
+                // Check if the path or size are invalid
                 if (path.empty()) {
                     std::cerr << "Error: Invalid command. Usage: create_file [path] [size]." << std::endl;
                     continue;
@@ -62,7 +59,7 @@ void startCLI(FileManager& fileManager) {
                     std::cerr << "Invalid size: '" << sizeStr << "'. Please provide a valid number." << std::endl;
                 } 
 
-                if (size >= 1048576) {
+                if (size >= 1048576) { // Max size 
                     std::cerr << "File size is too large. Please provide a number between 1 and 1048576." << std::endl;
                     continue;
                 } else if (size <= 0) {
@@ -71,13 +68,10 @@ void startCLI(FileManager& fileManager) {
                 }
 
                 fileManager.createFile(path, size);
-                //std::cout << "File created at " << path << std::endl;
-
             } else if (command == "create_dir") {
                 std::string path;
                 iss >> path;
                 fileManager.createDirectory(path);
-                //std::cout << "Directory created at " << path << std::endl;
             } else if (command == "delete_file") {
                 std::string path;
                 iss >> path;
@@ -85,7 +79,6 @@ void startCLI(FileManager& fileManager) {
                     path.insert(0, "/");
                 }
                 fileManager.deleteFile(path);
-                //std::cout << "File deleted at " << path << std::endl;
             } else if (command == "delete_dir") {
                 std::string path;
                 std::string recursiveStr;
@@ -93,7 +86,6 @@ void startCLI(FileManager& fileManager) {
                 iss >> path >> recursiveStr;
                 if (recursiveStr == "false") recursive = false;
                 fileManager.deleteDirectory(path, recursive);
-                //std::cout << "Directory deleted at " << path << std::endl;
             } else if (command == "write_file") {
                 std::string path, data, appendStr;
                 bool append = true;
@@ -129,7 +121,6 @@ void startCLI(FileManager& fileManager) {
                 data.erase(data.find_last_not_of(" \t") + 1);
 
                 fileManager.writeFile(path, data, append);
-                //std::cout << "Data written to " << path << std::endl;
             } else if (command == "read_file") {
                 std::string path;
                 iss >> path;
@@ -154,7 +145,6 @@ void startCLI(FileManager& fileManager) {
                     std::cout << "Usage: move_file [source] [destination]" << std::endl;
                 } else {
                     fileManager.moveFile(source, destination);
-                    //std::cout << "File moved from " << source << " to " << destination << std::endl;
                 }
             } else if (command == "exit") {
                 std::cout << "Exiting CLI. Goodbye!" << std::endl;
@@ -168,9 +158,8 @@ void startCLI(FileManager& fileManager) {
     }
 }
 
-
 #ifndef TEST_BUILD
-/*int main() {
+int main() { // Comment out main if running Unit Tests
     const std::string diskName = "cli_disk.dat";
     const std::string fileSystemDataFile = "filesystem.dat";
 
@@ -195,5 +184,5 @@ void startCLI(FileManager& fileManager) {
     fsOut.close();
 
     return 0;
-}*/
+}
 #endif

@@ -66,7 +66,7 @@ protected:
 
 /* CREATE FILE TESTS */
 
-// Create file with valid path and size
+// Test: Create file with valid path and size
 TEST(CommandLineTest, CreateFileWithValidPathAndSize) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -80,7 +80,7 @@ TEST(CommandLineTest, CreateFileWithValidPathAndSize) {
     EXPECT_EQ(fileEntry->size, 50) << "/validfile.txt should have a size of 50.";
 }
 
-// Create file with negative size
+// Test: Create file with negative size
 TEST(CommandLineTest, CreateFileWithNegativeSize) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -95,7 +95,7 @@ TEST(CommandLineTest, CreateFileWithNegativeSize) {
     EXPECT_TRUE(output.find("File size must be a positive number") != std::string::npos);
 }
 
-// Create file with size 0
+// Test: Create file with size 0
 TEST(CommandLineTest, CreateFileWithZeroSize) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -109,7 +109,7 @@ TEST(CommandLineTest, CreateFileWithZeroSize) {
         << "Captured output: " << output;
 }
 
-// Create file with non integer size
+// Test: Create file with non integer size
 TEST(CommandLineTest, CreateFileWithNonIntegerSize) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -123,7 +123,7 @@ TEST(CommandLineTest, CreateFileWithNonIntegerSize) {
         << "Captured output: " << output;
 }
 
-// Create file with missing size
+// Test: Create file with missing size
 TEST(CommandLineTest, CreateFileWithMissingSize) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -137,7 +137,7 @@ TEST(CommandLineTest, CreateFileWithMissingSize) {
         << "Captured output: " << output;
 }
 
-// Create file that already exists
+// Test: Create file that already exists
 TEST(CommandLineTest, CreateFileThatAlreadyExists) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -151,7 +151,7 @@ TEST(CommandLineTest, CreateFileThatAlreadyExists) {
         << "Captured output: " << output;
 }
 
-// Create file with max unsigned long size
+// Test: Create file with max unsigned long size
 TEST(CommandLineTest, CreateFileWithMaxUnsignedLongSize) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -165,7 +165,7 @@ TEST(CommandLineTest, CreateFileWithMaxUnsignedLongSize) {
         << "Captured output: " << output;
 }
 
-// Create File with Special Characters in Path
+// Test: Create File with Special Characters in Path
 TEST(CommandLineTest, CreateFileWithSpecialCharactersInPath) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -181,7 +181,7 @@ TEST(CommandLineTest, CreateFileWithSpecialCharactersInPath) {
 
 /* DELETE FILE TESTS */
 
-// Delete File that Exists
+// Test: Delete File that Exists
 TEST(CommandLineTest, DeleteFileThatExists) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -195,7 +195,7 @@ TEST(CommandLineTest, DeleteFileThatExists) {
 }
 
 
-// Delete File that Does Not Exist
+// Test: Delete File that Does Not Exist
 TEST(CommandLineTest, DeleteFileThatDoesNotExist) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -209,7 +209,7 @@ TEST(CommandLineTest, DeleteFileThatDoesNotExist) {
         << "Captured output: " << output;
 }
 
-// Delete File but Path is a Directory
+// Test: Delete File but Path is a Directory
 TEST(CommandLineTest, DeleteFileThatIsADirectory) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -227,7 +227,7 @@ TEST(CommandLineTest, DeleteFileThatIsADirectory) {
 
 /* CREATE DIRECTORY TESTS */
 
-// Create Directory
+// Test: Create Directory
 TEST(CommandLineTest, CreateDirectory) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -241,7 +241,7 @@ TEST(CommandLineTest, CreateDirectory) {
 }
 
 
-// Create Directory with Special Characters
+// Test: Create Directory with Special Characters
 TEST(CommandLineTest, CreateDirectoryWithSpecialCharacters) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -255,7 +255,7 @@ TEST(CommandLineTest, CreateDirectoryWithSpecialCharacters) {
         << "Captured output: " << output;
 }
 
-// Create directory with invalid path
+// Test: Create directory with invalid path
 TEST(CommandLineTest, CreateDirectoryWithInvalidPath) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -269,9 +269,111 @@ TEST(CommandLineTest, CreateDirectoryWithInvalidPath) {
         << "Captured output: " << output;
 }
 
+/* DELETE DIRECTORY TESTS */
+
+// Test: Delete Empty Directory**
+TEST(CommandLineTest, DeleteEmptyDirectory) {
+    DiskManager diskManager("test_disk.dat", 256);
+    FileManager fileManager(diskManager);
+
+    fileManager.createDirectory("/empty_dir");
+
+    // Ensure the directory exists
+    const FileEntry* dirEntry = fileManager.getMetadata("/empty_dir");
+    ASSERT_TRUE(dirEntry != nullptr) << "Directory /empty_dir should exist.";
+
+    // Delete the empty directory
+    fileManager.deleteDirectory("/empty_dir", false);
+
+    // Verify the directory is deleted
+    dirEntry = fileManager.getMetadata("/empty_dir");
+    EXPECT_TRUE(dirEntry == nullptr) << "Directory /empty_dir should no longer exist.";
+}
+
+// Test: Delete Non-Empty Directory Without Recursive**
+TEST(CommandLineTest, DeleteNonEmptyDirectoryWithoutRecursive) {
+    DiskManager diskManager("test_disk.dat", 256);
+    FileManager fileManager(diskManager);
+
+    fileManager.createDirectory("/parent_dir");
+    fileManager.createFile("/parent_dir/file1.txt", 50);
+
+    // Ensure the directory exists
+    const FileEntry* dirEntry = fileManager.getMetadata("/parent_dir");
+    ASSERT_TRUE(dirEntry != nullptr) << "Directory /parent_dir should exist.";
+
+    // Attempt to delete the non-empty directory without recursive, expect an error
+    try {
+        fileManager.deleteDirectory("/parent_dir", false);
+        FAIL() << "Expected runtime_error due to non-empty directory";
+    } catch (const std::runtime_error& err) {
+        EXPECT_STREQ(err.what(), "Directory is not empty.");
+    } catch (...) {
+        FAIL() << "Expected runtime_error due to non-empty directory";
+    }
+
+    // Verify the directory still exists
+    dirEntry = fileManager.getMetadata("/parent_dir");
+    EXPECT_TRUE(dirEntry != nullptr) << "Directory /parent_dir should still exist.";
+}
+
+// Test: Delete Non-Empty Directory With Recursive**
+TEST(CommandLineTest, DeleteNonEmptyDirectoryWithRecursive) {
+    DiskManager diskManager("test_disk.dat", 256);
+    FileManager fileManager(diskManager);
+
+    // Create directory structure
+    fileManager.createDirectory("/parent_dir");
+    fileManager.createFile("/parent_dir/file1.txt", 50);
+    fileManager.createFile("/parent_dir/file2.txt", 100);
+
+    // Verify the directory structure exists
+    ASSERT_TRUE(fileManager.getMetadata("/parent_dir") != nullptr) << "Directory /parent_dir should exist.";
+    ASSERT_TRUE(fileManager.getMetadata("/parent_dir/file1.txt") != nullptr) << "File /parent_dir/file1.txt should exist.";
+    ASSERT_TRUE(fileManager.getMetadata("/parent_dir/file2.txt") != nullptr) << "File /parent_dir/file2.txt should exist.";
+
+    // Delete the non-empty directory recursively
+    fileManager.deleteDirectory("/parent_dir", true);
+
+    // Check if directory and contents are deleted using list_dir
+    IOTestHelper ioHelper("list /parent_dir\nexit\n");
+    startCLI(fileManager);
+
+    std::string output = ioHelper.getOutput();
+    EXPECT_TRUE(output.find("Directory does not exist.") != std::string::npos)
+        << "Expected 'Directory does not exist.' but got: " << output;
+
+    // Check that the files no longer exist using list_dir on root to ensure no remnants exist
+    IOTestHelper ioHelperRoot("list /\nexit\n");
+    startCLI(fileManager);
+
+    std::string rootOutput = ioHelperRoot.getOutput();
+    EXPECT_TRUE(rootOutput.find("file1.txt") == std::string::npos) 
+        << "File /parent_dir/file1.txt should no longer exist in root directory: " << rootOutput;
+    EXPECT_TRUE(rootOutput.find("file2.txt") == std::string::npos) 
+        << "File /parent_dir/file2.txt should no longer exist in root directory: " << rootOutput;
+}
+
+
+// Test: Delete Non-Existent Directory**
+TEST(CommandLineTest, DeleteNonExistentDirectory) {
+    DiskManager diskManager("test_disk.dat", 256);
+    FileManager fileManager(diskManager);
+
+    // Attempt to delete a non-existent directory, expect an error
+    try {
+        fileManager.deleteDirectory("/non_existent_dir", false);
+        FAIL() << "Expected runtime_error due to non-existent directory";
+    } catch (const std::runtime_error& err) {
+        EXPECT_STREQ(err.what(), "Directory does not exist.");
+    } catch (...) {
+        FAIL() << "Expected runtime_error due to non-existent directory";
+    }
+}
+
 /* FILE READ AND WRITE TESTS */
 
-// Write to File
+// Test: Write to File
 TEST(CommandLineTest, WriteToFile) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -287,7 +389,7 @@ TEST(CommandLineTest, WriteToFile) {
     EXPECT_EQ(fileData, "HelloWorld") << "Data in /write_me.txt should match.";
 }
 
-// Write to File that Doesn't Exist
+// Test: Write to File that Doesn't Exist
 TEST(CommandLineTest, WriteToNonExistentFile) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -301,7 +403,7 @@ TEST(CommandLineTest, WriteToNonExistentFile) {
         << "Captured output: " << output;
 }
 
-// Read File
+// Test: Read File
 TEST(CommandLineTest, ReadFile) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -318,7 +420,7 @@ TEST(CommandLineTest, ReadFile) {
         << "Captured output: " << output;
 }
 
-// List Directory Contents
+// Test: List Directory Contents
 TEST(CommandLineTest, ListDirectory) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -336,7 +438,9 @@ TEST(CommandLineTest, ListDirectory) {
         << "Captured output: " << output;
 }
 
-// Move file to a new directory
+/* MOVE TESTS */
+
+// Test: Move file to a new directory
 TEST(CommandLineTest, MoveFileToNewDirectory) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -357,7 +461,7 @@ TEST(CommandLineTest, MoveFileToNewDirectory) {
     ASSERT_TRUE(newFileEntry != nullptr) << "File /new_folder/file2.txt should exist.";
 }
 
-// Move file to a non-existent directory (should fail)
+// Test: Move file to a non-existent directory (should fail)
 TEST(CommandLineTest, MoveFileToNonExistentDirectory) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -371,6 +475,7 @@ TEST(CommandLineTest, MoveFileToNonExistentDirectory) {
     ASSERT_TRUE(originalFileEntry != nullptr) << "File /file1.txt should still exist.";
 }
 
+// Test: Move empty file
 TEST(CommandLineTest, MoveEmptyFile) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);
@@ -388,6 +493,7 @@ TEST(CommandLineTest, MoveEmptyFile) {
     EXPECT_TRUE(newFileEntry->type == FileType::File) << "/empty_folder/empty_file should be a file.";
 }
 
+// Test: Move and check that content is retained
 TEST(CommandLineTest, MoveFileAndRetainContent) {
     DiskManager diskManager("test_disk.dat", 256);
     FileManager fileManager(diskManager);

@@ -36,12 +36,12 @@ protected:
     }
 };
 
-// **Test 1: Disk Initialization**
+// Test: Disk Initialization
 TEST_F(DiskManagerTests, InitializeDisk) {
     ASSERT_EQ(diskManager->getBitmap().getBitmap().size(), MAX_BLOCKS_TEST);
 }
 
-// **Test 2: Write and Read Block**
+// Test: Write and Read Block
 TEST_F(DiskManagerTests, WriteAndReadBlock) {
     std::string data = "Hello, World!";
     diskManager->writeBlock(0, data);
@@ -51,7 +51,7 @@ TEST_F(DiskManagerTests, WriteAndReadBlock) {
     ASSERT_EQ(readData, data) << "The data read from block 0 did not match the written data.";
 }
 
-// **Test 3: Delete Block**
+// Test: Delete Block
 TEST_F(DiskManagerTests, DeleteBlock) {
     const size_t blockIndex = 0;
     std::string data = "Test data for block";
@@ -69,7 +69,7 @@ TEST_F(DiskManagerTests, DeleteBlock) {
     ASSERT_THROW(diskManager->deleteBlock(blockIndex), std::runtime_error);
 }
 
-// **Test 4: Write to Multiple Blocks**
+// Test: Write to Multiple Blocks
 TEST_F(DiskManagerTests, WriteToMultipleBlocks) {
     std::string data1 = "Block 0 data";
     std::string data2 = "Block 1 data";
@@ -82,7 +82,7 @@ TEST_F(DiskManagerTests, WriteToMultipleBlocks) {
     ASSERT_EQ(diskManager->readBlock(1), data2) << "Block 1 data mismatch.";
 }
 
-// **Test 5: Overwrite Block**
+// Test: Overwrite Block
 TEST_F(DiskManagerTests, OverwriteBlock) {
     std::string initialData = "Initial data";
     std::string newData = "New data after overwrite";
@@ -95,7 +95,7 @@ TEST_F(DiskManagerTests, OverwriteBlock) {
     ASSERT_EQ(diskManager->readBlock(0), newData) << "Data after overwrite mismatch.";
 }
 
-// **Test 6: Invalid Block Index**
+// Test: Invalid Block Index
 TEST_F(DiskManagerTests, InvalidBlockIndex) {
     // Trying to read a block out of range should throw an error
     ASSERT_THROW(diskManager->readBlock(MAX_BLOCKS_TEST), std::out_of_range);
@@ -232,7 +232,7 @@ TEST_F(FileManagerTests, RootDeletionGuard) {
     EXPECT_THROW(fileManager->deleteDirectory("/root", true), std::runtime_error);
 }
 
-// Write and read data from a file
+// Test: Write and read data from a file
 TEST_F(FileManagerTests, WriteAndReadFile) {
     // Create a file
     ASSERT_NO_THROW(fileManager->createFile("/file.txt", 0));
@@ -252,7 +252,7 @@ TEST_F(FileManagerTests, WriteAndReadFile) {
     std::cout << "Final file content: " << result << std::endl;
 }
 
-// Overwrites a file
+// Test: Overwrites a file
 TEST_F(FileManagerTests, OverwriteFile) {
     // Create a file
     ASSERT_NO_THROW(fileManager->createFile("/file.txt", 0));
@@ -274,15 +274,4 @@ TEST_F(FileManagerTests, OverwriteFile) {
     ASSERT_NO_THROW(updatedContent = fileManager->readFile("/file.txt"));
     ASSERT_EQ(updatedContent, "New data");
     std::cout << "Updated file content: " << updatedContent << std::endl;
-}
-
-TEST_F(FileManagerTests, OpenFile) {
-    // Create a file
-    fileManager->createFile("/example.txt", 0);
-    
-    // Write some content
-    fileManager->writeFile("/example.txt", "This is a test file.", false);
-
-    // Open and display the file
-    ASSERT_NO_THROW(fileManager->openFile("/example.txt"));
 }
