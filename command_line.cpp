@@ -1,5 +1,6 @@
 #include <iostream>
 #include <sstream>
+#include <regex>
 #include "file_manager.h"
 #include "command_line.h"
 
@@ -60,6 +61,9 @@ void startCLI(FileManager& fileManager) {
                 if (size >= 1048576) {
                     std::cerr << "File size is too large. Please provide a number between 1 and 1048576." << std::endl;
                     continue;
+                } else if (size <= 0) {
+                    std::cerr << "Error: File size must be a positive number." << std::endl;
+                    continue;
                 }
 
                 fileManager.createFile(path, size);
@@ -85,9 +89,39 @@ void startCLI(FileManager& fileManager) {
                 std::cout << "Directory deleted at " << path << std::endl;
             } else if (command == "write_file") {
                 std::string path, data, appendStr;
-                bool append = false;
-                iss >> path >> data >> appendStr;
-                if (appendStr == "true") append = true;
+                bool append = true;
+                iss >> path;
+
+                // 🔥 Read the entire remaining line as data
+                std::getline(iss, data);
+
+                // 🔥 Remove leading and trailing whitespace
+                data.erase(0, data.find_first_not_of(" \t"));
+                data.erase(data.find_last_not_of(" \t") + 1);
+
+                // 🔥 Extract the quoted string if present
+                std::smatch match;
+                std::regex quotedRegex(R"delim("([^"]*)")delim");
+                if (std::regex_search(data, match, quotedRegex)) {
+                    data = match[1].str(); // Extract the content inside the quotes
+                }
+
+                // 🔥 Extract possible append flag
+
+                size_t spacePos = data.find_last_of(' '); 
+                if (spacePos != std::string::npos) {
+                    appendStr = data.substr(spacePos + 1); // Extract last part
+                    if (appendStr == "true" || appendStr == "false") {
+                        data = data.substr(0, spacePos);  // Extract actual data
+                        append = (appendStr == "true");   // Set append flag
+                    }
+                }
+
+                // 🔥 Remove leading and trailing whitespace again to clean up
+                data.erase(0, data.find_first_not_of(" \t"));
+                data.erase(data.find_last_not_of(" \t") + 1);
+
+                std::cout << "Data to write: " << data << std::endl;
                 fileManager.writeFile(path, data, append);
                 std::cout << "Data written to " << path << std::endl;
             } else if (command == "read_file") {
@@ -115,7 +149,63 @@ void startCLI(FileManager& fileManager) {
     }
 }
 #ifndef TEST_BUILD
+int main() {
+    const std::string diskName = "cli_disk.dat";
+    const std::string fileSystemDataFile = "filesystem.dat";
+
+    DiskManager diskManager(diskName, 256);
+    FileManager fileManager(diskManager);
+
+    
+
+    // 🔥 Load existing file system metadata
+    std::ifstream fsFile(fileSystemDataFile, std::ios::binary);
+    if (fsFile) {
+        std::cout << "in load file" << std::endl;
+        fileManager.load(fsFile);
+        fsFile.close();
+    }
+
+    
+
+    startCLI(fileManager);
+
+    // 🔥 Save disk contents before exit
+    /*std::ofstream outFile(diskName, std::ios::binary);
+    diskManager.save(outFile);
+    outFile.close();*/
+
+    // 🔥 Save file system metadata before exit
+    std::ofstream fsOut(fileSystemDataFile, std::ios::binary);
+    fileManager.save(fsOut);
+    fsOut.close();
+
+    return 0;
+}
+#endif
 /*int main() {
+    const std::string diskName = "cli_disk.dat";
+    const std::string fileSystemDataFile = "filesystem.dat";
+    DiskManager diskManager(diskName, 256);
+    FileManager fileManager(diskManager);
+
+    // Load existing file system metadata
+    std::ifstream inFile(fileSystemDataFile, std::ios::binary);
+    if (inFile) {
+        fileManager.load(inFile);
+        inFile.close();
+    }
+
+    startCLI(fileManager);
+
+    // Save file system metadata on exit
+    std::ofstream outFile(fileSystemDataFile, std::ios::binary);
+    fileManager.save(outFile);
+    outFile.close();
+
+    return 0;
+    
+    
     const std::string diskName = "cli_disk.dat";
     const size_t numBlocks = 256;
 
@@ -129,4 +219,3 @@ void startCLI(FileManager& fileManager) {
 
     return 0;
 }*/
-#endif

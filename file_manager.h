@@ -8,6 +8,7 @@
 #include <regex>
 #include <sstream>
 #include <iostream>
+#include <fstream>
 
 
 // Utility function to check if a string is a number
@@ -52,6 +53,7 @@ public:
 
     void createFile(const std::string& path, size_t size);
     void createDirectory(const std::string& path);
+    void ensureParentDirectories(const std::string& path);
     void deleteFile(const std::string& path);
     void deleteDirectory(const std::string& path, bool recursive = false);
     std::vector<std::string> listDirectory(const std::string& path) const;
@@ -59,6 +61,9 @@ public:
     void writeFile(const std::string& path, const std::string& data, bool append);
     std::string readFile(const std::string& path) const;
     void openFile(const std::string& path) const;
+
+    void save(std::ofstream& outFile) const; // Save file system state
+    void load(std::ifstream& inFile);        // Load file system state
 
 private:
     DiskManager& diskManager;

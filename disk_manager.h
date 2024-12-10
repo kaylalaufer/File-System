@@ -5,6 +5,9 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <fstream>
+#include <stdexcept>
+#include <cstring>
 
 // Constants
 const size_t MAX_BLOCKS = 256;
@@ -39,7 +42,11 @@ public:
 
     const Bitmap& getBitmap() const;
 
+    void save(std::ofstream& outFile) const;
+    void load(std::ifstream& inFile);
+
 private:
+    std::fstream diskFile;
     std::string diskName;
     size_t numBlocks;
     Bitmap bitmap;

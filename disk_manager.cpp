@@ -1,7 +1,5 @@
 #include "disk_manager.h"
-#include <fstream>
-#include <stdexcept>
-#include <cstring>
+
 
 // Bitmap Implementation
 Bitmap::Bitmap(size_t numBlocks) : bitmap(numBlocks, true) {}
@@ -27,7 +25,29 @@ const std::vector<bool>& Bitmap::getBitmap() const {
 
 // DiskManager Implementation
 DiskManager::DiskManager(const std::string& diskName, size_t numBlocks)
-    : diskName(diskName), numBlocks(numBlocks), bitmap(numBlocks) {}
+    : diskName(diskName), numBlocks(numBlocks), bitmap(numBlocks) {
+    // 🔥 Open the disk file for reading and writing
+    diskFile.open(diskName, std::ios::in | std::ios::out | std::ios::binary);
+    
+    if (!diskFile) {
+        // 🔥 If the disk file doesn't exist, create it
+        std::cout << "Creating new disk: " << diskName << std::endl;
+        diskFile.clear();
+        diskFile.open(diskName, std::ios::out | std::ios::binary); // Create file
+        diskFile.close();
+        diskFile.open(diskName, std::ios::in | std::ios::out | std::ios::binary); // Re-open in read/write mode
+
+        // 🔥 Initialize the disk with empty blocks
+        std::string emptyBlock(BLOCK_SIZE, '\0');
+        for (size_t i = 0; i < numBlocks; ++i) {
+            diskFile.write(emptyBlock.c_str(), BLOCK_SIZE);
+        }
+    }
+
+    if (!diskFile) {
+        throw std::runtime_error("Failed to open disk file for read/write");
+    }
+}
 
 void DiskManager::writeBlock(size_t blockIndex, const std::string& data) {
     if (data.size() > BLOCK_SIZE) {
@@ -35,11 +55,13 @@ void DiskManager::writeBlock(size_t blockIndex, const std::string& data) {
     }
 
     if (blockIndex >= numBlocks) {
+        std::cout << "index: " << blockIndex << "num blocks: "<< numBlocks << std::endl;
         throw std::out_of_range("Block index out of range");
     }
 
     // Open disk file
     std::fstream disk(diskName, std::ios::in | std::ios::out | std::ios::binary);
+    // std::cout << " Name: " << diskName << std::endl;
     if (!disk) {
         throw std::runtime_error("Failed to open disk file for writing");
     }
@@ -65,6 +87,7 @@ std::string DiskManager::readBlock(size_t blockIndex) const {
     }
 
     std::ifstream disk(diskName, std::ios::binary);
+    // std::cout << " Name: " << diskName << std::endl;
     if (!disk) {
         throw std::runtime_error("Failed to open disk file for reading");
     }
@@ -134,3 +157,81 @@ void DiskManager::setBlockFree(size_t blockIndex) {
 const Bitmap& DiskManager::getBitmap() const {
     return bitmap;
 }
+
+
+void DiskManager::save(std::ofstream& outFile) const {
+    // Save the bitmap
+    size_t bitmapSize = bitmap.getBitmap().size();
+    outFile.write(reinterpret_cast<const char*>(&bitmapSize), sizeof(bitmapSize));
+
+    // 🔥 Convert bool to char and write
+    for (bool bit : bitmap.getBitmap()) {
+        char byte = bit ? 1 : 0; // Convert bool to byte
+        outFile.write(&byte, sizeof(char));
+    }
+
+    // Save all block data
+    for (size_t i = 0; i < numBlocks; ++i) {
+        if (!bitmap.isFree(i)) {
+            std::string blockData = readBlock(i); // Read the content of the block
+            size_t dataSize = blockData.size();
+            outFile.write(reinterpret_cast<const char*>(&i), sizeof(i)); // Save the block index
+            outFile.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize)); // Save size of block data
+            outFile.write(blockData.c_str(), dataSize); // Write the actual block data
+        }
+    }
+
+    // Write an end marker to know we've written all blocks
+    size_t endMarker = static_cast<size_t>(-1);
+    outFile.write(reinterpret_cast<const char*>(&endMarker), sizeof(endMarker));
+}
+
+
+void DiskManager::load(std::ifstream& inFile) {
+    // Load the bitmap
+    size_t bitmapSize;
+    inFile.read(reinterpret_cast<char*>(&bitmapSize), sizeof(bitmapSize));
+    if (inFile.eof()) return; // 🔥 Early exit if EOF reached
+
+    std::vector<bool> bitmapData(bitmapSize);
+    for (size_t i = 0; i < bitmapSize; ++i) {
+        char byte;
+        inFile.read(&byte, sizeof(char));
+        if (inFile.eof()) return; // 🔥 Early exit if EOF reached
+        bitmapData[i] = (byte == 1); // Convert byte back to bool
+    }
+
+    bitmap = Bitmap(bitmapSize);
+    for (size_t i = 0; i < bitmapSize; ++i) {
+        if (!bitmapData[i]) {
+            bitmap.setOccupied(i);
+        }
+    }
+
+    // Load all block data
+    while (true) {
+        size_t blockIndex;
+        inFile.read(reinterpret_cast<char*>(&blockIndex), sizeof(blockIndex));
+        if (inFile.eof()) break; // 🔥 Check for EOF before using blockIndex
+        if (blockIndex == static_cast<size_t>(-1)) break; // 🔥 Check for end marker
+        if (blockIndex >= numBlocks) {
+            throw std::runtime_error("Invalid block index read from file");
+        }
+
+        size_t dataSize;
+        inFile.read(reinterpret_cast<char*>(&dataSize), sizeof(dataSize));
+        if (inFile.eof()) break; // 🔥 Check for EOF
+        if (dataSize > BLOCK_SIZE) {
+            throw std::runtime_error("Data size exceeds block size");
+        }
+
+        std::string blockData(dataSize, '\0');
+        inFile.read(&blockData[0], dataSize);
+        if (inFile.eof()) break; // 🔥 Check for EOF
+
+        writeBlock(blockIndex, blockData); // Write the data back to the block
+    }
+}
+
+
+

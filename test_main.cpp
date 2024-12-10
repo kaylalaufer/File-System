@@ -3,60 +3,104 @@
 #include "file_manager.h"
 #include <fstream>
 #include <sstream>
+#include <cstdio> // For std::remove()
 
-// Constants
-const std::string TEST_DISK = "test_disk.dat";
+// Constants for DiskManager
+const size_t MAX_BLOCKS_TEST = 256;
+const size_t BLOCK_SIZE_TEST = 4096; // Assuming a block size of 4 KB
+const std::string TEST_DISK_FILE = "test_disk_manager.dat";
 
-// Helper function to initialize the disk
+// Helper function to initialize the disk file
 void initializeDiskFile(const std::string& diskName) {
     std::ofstream disk(diskName, std::ios::binary | std::ios::trunc);
-    std::string emptyData(MAX_BLOCKS * BLOCK_SIZE, '\0');
+    std::string emptyData(MAX_BLOCKS_TEST * BLOCK_SIZE_TEST, '\0');
     disk.write(emptyData.c_str(), emptyData.size());
     disk.close();
 }
 
-// Test case: Initialize Disk
-TEST(DiskManagerTests, InitializeDisk) {
-    const std::string diskName = "test_initialize.dat";
-    initializeDiskFile(diskName);
+// Test Fixture for DiskManager
+class DiskManagerTests : public ::testing::Test {
+protected:
+    DiskManager* diskManager;
 
-    DiskManager diskManager(diskName, MAX_BLOCKS);
-    ASSERT_EQ(diskManager.getBitmap().getBitmap().size(), MAX_BLOCKS);
+    void SetUp() override {
+        // Create a new blank disk file before each test
+        initializeDiskFile(TEST_DISK_FILE);
+        diskManager = new DiskManager(TEST_DISK_FILE, MAX_BLOCKS_TEST);
+    }
+
+    void TearDown() override {
+        // Clean up memory and delete the disk file after each test
+        delete diskManager;
+        std::remove(TEST_DISK_FILE.c_str());
+    }
+};
+
+// **Test 1: Disk Initialization**
+TEST_F(DiskManagerTests, InitializeDisk) {
+    ASSERT_EQ(diskManager->getBitmap().getBitmap().size(), MAX_BLOCKS_TEST);
 }
 
-// Test case: Write and Read Block
-TEST(DiskManagerTests, WriteAndReadBlock) {
-    const std::string diskName = "test_write_read.dat";
-    initializeDiskFile(diskName);
-
-    DiskManager diskManager(diskName, MAX_BLOCKS);
+// **Test 2: Write and Read Block**
+TEST_F(DiskManagerTests, WriteAndReadBlock) {
     std::string data = "Hello, World!";
-    diskManager.writeBlock(0, data);
+    diskManager->writeBlock(0, data);
 
     // Read the block and validate
-    ASSERT_EQ(diskManager.readBlock(0), data);
+    std::string readData = diskManager->readBlock(0);
+    ASSERT_EQ(readData, data) << "The data read from block 0 did not match the written data.";
 }
 
-// Test case: Delete Block
-TEST(DiskManagerTests, DeleteBlock) {
-    const std::string diskName = "test_delete.dat";
-    initializeDiskFile(diskName);
-
-    DiskManager diskManager(diskName, MAX_BLOCKS);
+// **Test 3: Delete Block**
+TEST_F(DiskManagerTests, DeleteBlock) {
     const size_t blockIndex = 0;
-
-    // Write data to the block
     std::string data = "Test data for block";
-    diskManager.writeBlock(blockIndex, data);
+    
+    // Write data to the block
+    diskManager->writeBlock(blockIndex, data);
 
-    // Delete the block (should succeed)
-    ASSERT_NO_THROW(diskManager.deleteBlock(blockIndex));
+    // Delete the block
+    ASSERT_NO_THROW(diskManager->deleteBlock(blockIndex));
 
-    // Verify the block is free
-    ASSERT_THROW(diskManager.readBlock(blockIndex), std::runtime_error);
+    // Verify the block is free by attempting to read it (assuming it throws an error)
+    ASSERT_THROW(diskManager->readBlock(blockIndex), std::runtime_error);
 
-    // Attempt to delete an already free block (should throw)
-    ASSERT_THROW(diskManager.deleteBlock(blockIndex), std::runtime_error);
+    // Attempt to delete an already free block (should throw an error)
+    ASSERT_THROW(diskManager->deleteBlock(blockIndex), std::runtime_error);
+}
+
+// **Test 4: Write to Multiple Blocks**
+TEST_F(DiskManagerTests, WriteToMultipleBlocks) {
+    std::string data1 = "Block 0 data";
+    std::string data2 = "Block 1 data";
+    
+    diskManager->writeBlock(0, data1);
+    diskManager->writeBlock(1, data2);
+
+    // Validate both blocks
+    ASSERT_EQ(diskManager->readBlock(0), data1) << "Block 0 data mismatch.";
+    ASSERT_EQ(diskManager->readBlock(1), data2) << "Block 1 data mismatch.";
+}
+
+// **Test 5: Overwrite Block**
+TEST_F(DiskManagerTests, OverwriteBlock) {
+    std::string initialData = "Initial data";
+    std::string newData = "New data after overwrite";
+
+    diskManager->writeBlock(0, initialData);
+    ASSERT_EQ(diskManager->readBlock(0), initialData) << "Initial data mismatch.";
+
+    // Overwrite the block
+    diskManager->writeBlock(0, newData);
+    ASSERT_EQ(diskManager->readBlock(0), newData) << "Data after overwrite mismatch.";
+}
+
+// **Test 6: Invalid Block Index**
+TEST_F(DiskManagerTests, InvalidBlockIndex) {
+    // Trying to read a block out of range should throw an error
+    ASSERT_THROW(diskManager->readBlock(MAX_BLOCKS_TEST), std::out_of_range);
+    ASSERT_THROW(diskManager->writeBlock(MAX_BLOCKS_TEST, "Test"), std::out_of_range);
+    ASSERT_THROW(diskManager->deleteBlock(MAX_BLOCKS_TEST), std::out_of_range);
 }
 
 // Test Fixture
@@ -66,17 +110,15 @@ protected:
     FileManager* fileManager;
 
     void SetUp() override {
-        //const std::string testDisk = "test_disk_" + std::string(::testing::UnitTest::GetInstance()->current_test_info()->test_case_name()) + ".dat";
         const std::string testDisk = "test_file_manager.dat";
         initializeDiskFile(testDisk);
-        diskManager = new DiskManager(testDisk, MAX_BLOCKS);
+        diskManager = new DiskManager(testDisk, MAX_BLOCKS_TEST);
         fileManager = new FileManager(*diskManager);
     }
 
     void TearDown() override {
         delete fileManager;
         delete diskManager;
-        std::remove(TEST_DISK.c_str());
         std::remove("test_file_manager.dat");
     }
 };
@@ -192,24 +234,19 @@ TEST_F(FileManagerTests, RootDeletionGuard) {
 
 // Write and read data from a file
 TEST_F(FileManagerTests, WriteAndReadFile) {
-    initializeDiskFile("test_wr_disk.dat"); // Ensure the disk is initialized
-
-    DiskManager diskManager("test_wr_disk.dat", MAX_BLOCKS); // Initialize DiskManager
-    FileManager fileManager(diskManager); // Pass DiskManager to FileManager
-
     // Create a file
-    ASSERT_NO_THROW(fileManager.createFile("/file.txt", 0));
+    ASSERT_NO_THROW(fileManager->createFile("/file.txt", 0));
 
     // Write data
     std::string data1 = "Hello, ";
     std::string data2 = "World!";
 
-    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", data1, false));
-    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", data2, true));
+    ASSERT_NO_THROW(fileManager->writeFile("/file.txt", data1, false));
+    ASSERT_NO_THROW(fileManager->writeFile("/file.txt", data2, true));
 
     // Read data
     std::string result;
-    ASSERT_NO_THROW(result = fileManager.readFile("/file.txt"));
+    ASSERT_NO_THROW(result = fileManager->readFile("/file.txt"));
     ASSERT_EQ(result, "Hello, World!");
 
     std::cout << "Final file content: " << result << std::endl;
@@ -217,29 +254,24 @@ TEST_F(FileManagerTests, WriteAndReadFile) {
 
 // Overwrites a file
 TEST_F(FileManagerTests, OverwriteFile) {
-    initializeDiskFile("test_ow_disk.dat"); // Ensure the disk is initialized
-
-    DiskManager diskManager("test_ow_disk.dat", MAX_BLOCKS); // Initialize DiskManager
-    FileManager fileManager(diskManager); // Pass DiskManager to FileManager
-
     // Create a file
-    ASSERT_NO_THROW(fileManager.createFile("/file.txt", 0));
+    ASSERT_NO_THROW(fileManager->createFile("/file.txt", 0));
 
     // Write initial data
-    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", "Initial data", false));
+    ASSERT_NO_THROW(fileManager->writeFile("/file.txt", "Initial data", false));
 
     // Verify data
     std::string initialContent;
-    ASSERT_NO_THROW(initialContent = fileManager.readFile("/file.txt"));
+    ASSERT_NO_THROW(initialContent = fileManager->readFile("/file.txt"));
     ASSERT_EQ(initialContent, "Initial data");
     std::cout << "Initial file content: " << initialContent << std::endl;
 
     // Overwrite with new data
-    ASSERT_NO_THROW(fileManager.writeFile("/file.txt", "New data", false));
+    ASSERT_NO_THROW(fileManager->writeFile("/file.txt", "New data", false));
 
     // Verify the new data
     std::string updatedContent;
-    ASSERT_NO_THROW(updatedContent = fileManager.readFile("/file.txt"));
+    ASSERT_NO_THROW(updatedContent = fileManager->readFile("/file.txt"));
     ASSERT_EQ(updatedContent, "New data");
     std::cout << "Updated file content: " << updatedContent << std::endl;
 }
