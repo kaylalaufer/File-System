@@ -327,7 +327,7 @@ TEST(CommandLineTest, ListDirectory) {
     fileManager.createFile("/list_me/file1.txt", 100);
     fileManager.createFile("/list_me/file2.txt", 200);
 
-    IOTestHelper ioHelper("list_dir /list_me\nexit\n");
+    IOTestHelper ioHelper("list /list_me\nexit\n");
 
     startCLI(fileManager);
 

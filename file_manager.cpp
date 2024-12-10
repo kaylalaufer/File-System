@@ -188,7 +188,7 @@ void FileManager::deleteDirectory(const std::string& path, bool recursive) {
             }
         }
     }
-
+    
     fileTable.removeEntry(path); // Use local fileTable
 }
 

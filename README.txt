@@ -50,7 +50,7 @@ create_file [path] [size]: Creates a new file at the specified path with the giv
 delete_file [path]: Deletes a file.
 create_dir [path]: Creates a directory at the given path. By default, it will recursively create parent directories if they don't exist.
 delete_dir [path] [recursive]: Deletes a directory at the given path. By default, it will recursively delete sub content.
-list_dir [path]: Lists the contents of a directory. If no path is provided, it lists the contents of the root (/).
+list [path]: Lists the contents of a directory. If no path is provided, it lists the contents of the root (/).
 write_file [path] [data] [append]: Writes data to a file. By default, it appends (true) the data, but can be set to overwrite (false).
 read_file [path]: Reads and displays the contents of a file.
 move_file [source] [destination]: Moves a file from one location to another. You can also rename the file as part of the move by 
@@ -97,7 +97,7 @@ Move a file (moves and renames the file)
 > move_file /folder1/file1.txt /folder2/file2.txt
 
 List directory contents:
-> list_dir /
+> list /
 Contents of /:
   folder1
   folder2

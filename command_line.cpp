@@ -32,7 +32,7 @@ void startCLI(FileManager& fileManager) {
                 std::cout << "  delete_dir [path] [recursive]" << std::endl;
                 std::cout << "  write_file [path] [data] [append]" << std::endl;
                 std::cout << "  read_file [path]" << std::endl;
-                std::cout << "  list_dir [path]" << std::endl;
+                std::cout << "  list [path]" << std::endl;
                 std::cout << "  move_file [source] [destination]  - Move or rename a file." << std::endl;
                 std::cout << "  exit" << std::endl;
             } else if (command == "create_file") {
@@ -81,6 +81,9 @@ void startCLI(FileManager& fileManager) {
             } else if (command == "delete_file") {
                 std::string path;
                 iss >> path;
+                if (!path.empty() && path[0] != '/') {
+                    path.insert(0, "/");
+                }
                 fileManager.deleteFile(path);
                 //std::cout << "File deleted at " << path << std::endl;
             } else if (command == "delete_dir") {
@@ -132,7 +135,7 @@ void startCLI(FileManager& fileManager) {
                 iss >> path;
                 std::string content = fileManager.readFile(path);
                 std::cout << "Contents of " << path << ":\n" << content << std::endl;
-            } else if (command == "list_dir") {
+            } else if (command == "list") {
                 std::string path;
                 iss >> path;
                 if (path.empty()) {
