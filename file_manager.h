@@ -53,6 +53,7 @@ public:
 
     void createFile(const std::string& path, size_t size);
     void createDirectory(const std::string& path);
+    void ensureParentDirectories(const std::string& path);
     void deleteFile(const std::string& path);
     void deleteDirectory(const std::string& path, bool recursive = false);
     std::vector<std::string> listDirectory(const std::string& path) const;

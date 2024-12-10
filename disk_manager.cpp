@@ -55,6 +55,7 @@ void DiskManager::writeBlock(size_t blockIndex, const std::string& data) {
     }
 
     if (blockIndex >= numBlocks) {
+        std::cout << "index: " << blockIndex << "num blocks: "<< numBlocks << std::endl;
         throw std::out_of_range("Block index out of range");
     }
 

@@ -83,8 +83,77 @@ bool isNumber(const std::string& str) {
     return !str.empty() && std::all_of(str.begin(), str.end(), ::isdigit);
 }
 
-// Create a file
+// file_manager.cpp
+
+// Ensure that all parent directories exist for a given path
+void FileManager::ensureParentDirectories(const std::string& path) {
+    // Tokenize the path into its components
+    std::vector<std::string> tokens = tokenizePath(path);
+
+    std::string currentPath = "/";
+    for (size_t i = 0; i < tokens.size() - 1; ++i) { // Exclude the file or last directory name
+        currentPath += tokens[i];
+        const FileEntry* entry = findEntry(currentPath);
+
+        // If the directory does not exist, create it
+        if (!entry) {
+            std::cout << "Creating missing directory: " << currentPath << std::endl;
+            createDirectory(currentPath);
+        } else if (entry->type != FileType::Directory) {
+            throw std::runtime_error("Path conflict: " + currentPath + " exists but is not a directory.");
+        }
+
+        // Move to the next level
+        currentPath += "/";
+    }
+}
+
 void FileManager::createFile(const std::string& path, size_t size) {
+    if (!isValidName(path)) throw std::invalid_argument("Invalid file name.");
+
+    std::string resolvedPath = resolvePath(path);
+
+    // Ensure parent directories exist
+    ensureParentDirectories(resolvedPath);
+
+    if (findEntry(resolvedPath)) throw std::runtime_error("File already exists.");
+
+    // Allocate required blocks
+    size_t numBlocks = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    std::vector<size_t> blocks;
+    for (size_t i = 0; i < numBlocks; ++i) {
+        size_t blockIndex = diskManager.allocateBlock();
+        blocks.push_back(blockIndex);
+    }
+
+    // Create the file entry
+    FileEntry entry(resolvedPath, FileType::File, size, blocks);
+    fileTable.addEntry(entry);
+
+    std::cout << "Created File Entry: " << resolvedPath 
+              << ", Type: " << (entry.type == FileType::File ? "File" : "Directory") << std::endl;
+}
+
+void FileManager::createDirectory(const std::string& path) {
+    if (!isValidName(path)) throw std::invalid_argument("Invalid directory name.");
+
+    auto resolvedPath = resolvePath(path);
+
+    // Ensure parent directories exist
+    ensureParentDirectories(resolvedPath);
+
+    if (findEntry(resolvedPath)) throw std::runtime_error("Directory already exists.");
+
+    // Create directory entry with zero blocks
+    FileEntry entry(resolvedPath, FileType::Directory, 0, {});
+    fileTable.addEntry(entry);
+
+    std::cout << "Created Directory Entry: " << resolvedPath << std::endl;
+}
+
+
+// Create a file
+/*void FileManager::createFile(const std::string& path, size_t size) {
     if (!isValidName(path)) throw std::invalid_argument("Invalid file name.");
 
     std::string resolvedPath = resolvePath(path);
@@ -116,7 +185,7 @@ void FileManager::createDirectory(const std::string& path) {
     // Create directory entry with zero blocks
     FileEntry entry(resolvedPath, FileType::Directory, 0, {});
     fileTable.addEntry(entry);
-}
+}*/
 
 // Delete a file
 void FileManager::deleteFile(const std::string& path) {
@@ -154,6 +223,7 @@ void FileManager::deleteDirectory(const std::string& path, bool recursive) {
 
 std::vector<std::string> FileManager::listDirectory(const std::string& path) const {
     const auto* entry = findEntry(path);
+
     if (!entry) throw std::runtime_error("Directory does not exist.");
     if (entry->type != FileType::Directory) throw std::runtime_error("Path is not a directory.");
 
@@ -418,4 +488,8 @@ void FileManager::load(std::ifstream& inFile) {
         FileEntry root("/", FileType::Directory, 0, {});
         fileTable.addEntry(root);
     }
+
+    // 🔥 Load DiskManager state
+    diskManager.load(inFile);
+
 }
