@@ -406,8 +406,12 @@ void FileManager::moveFile(const std::string& sourcePath, const std::string& des
         throw std::runtime_error("Source is not a file: " + srcResolved);
     }
 
-    //  Check if the parent directory exists before creating it
+    //  Check if the parent directory exists before moving 
     std::string parentPath = resolvePath(destResolved.substr(0, destResolved.find_last_of('/')));
+    if (parentPath.empty() && destResolved != "/") {
+        parentPath = "/"; // Root directory
+    }
+
     const FileEntry* parentEntry = findEntry(parentPath);
     if (!parentEntry) {
         throw std::runtime_error("Parent directory does not exist: " + parentPath);
@@ -421,74 +425,5 @@ void FileManager::moveFile(const std::string& sourcePath, const std::string& des
     writeFile(destResolved, fileData, false); // Write all the file data
 
     // Remove source entry from file table
-    fileTable.removeEntry(srcResolved);
-}
-
-
-void FileManager::moveDirectory(const std::string& sourcePath, const std::string& destinationPath) {
-    std::string srcResolved = resolvePath(sourcePath);
-    std::string destResolved = resolvePath(destinationPath);
-
-    if (srcResolved == destResolved) {
-        throw std::runtime_error("Source and destination paths are the same.");
-    }
-
-    if (destinationPath.find(sourcePath) == 0) {
-        throw std::runtime_error("Cannot move a directory into itself: " + destinationPath);
-    }
-
-    const FileEntry* sourceEntry = findEntry(srcResolved);
-    if (!sourceEntry) {
-        throw std::runtime_error("Source directory does not exist: " + srcResolved);
-    }
-
-    if (sourceEntry->type != FileType::Directory) {
-        throw std::runtime_error("Source is not a directory: " + srcResolved);
-    }
-
-    //  Create the destination directory entry before moving contents
-    FileEntry newDirEntry = *sourceEntry;
-    newDirEntry.name = destResolved;
-    fileTable.addEntry(newDirEntry); // Add the new directory entry before moving contents
-
-    //  Recursively move subdirectories and files
-    std::vector<std::string> contents = listDirectory(srcResolved);
-    for (const std::string& item : contents) {
-        std::string srcItemPath = srcResolved + "/" + item;
-        std::string destItemPath = destResolved + "/" + item;
-
-        const FileEntry* entry = findEntry(srcItemPath);
-        if (!entry) continue;
-
-        if (entry->type == FileType::File) {
-            moveFile(srcItemPath, destItemPath);
-        } else if (entry->type == FileType::Directory) {
-            moveDirectory(srcItemPath, destItemPath);
-        }
-    }
-
-    //  Remove the source directory from fileTable
     deleteFile(srcResolved);
-}
-
-void FileManager::renamePath(const std::string& sourcePath, const std::string& newName) {
-    std::string srcResolved = resolvePath(sourcePath);
-    const FileEntry* sourceEntry = findEntry(srcResolved);
-    if (!sourceEntry) {
-        throw std::runtime_error("Source path does not exist: " + srcResolved);
-    }
-
-    std::string parentPath = srcResolved.substr(0, srcResolved.find_last_of('/'));
-    std::string destResolved = parentPath + "/" + newName;
-
-    if (findEntry(destResolved)) {
-        throw std::runtime_error("File or directory with the new name already exists: " + destResolved);
-    }
-
-    fileTable.removeEntry(srcResolved);
-    FileEntry newEntry = *sourceEntry;
-    newEntry.name = destResolved;
-    fileTable.addEntry(newEntry);
-
-    //std::cout << "Renamed " << sourcePath << " to " << newName << std::endl;
 }

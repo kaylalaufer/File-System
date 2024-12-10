@@ -58,7 +58,7 @@ public:
     void ensureParentDirectories(const std::string& path);
 
     void deleteFile(const std::string& path);
-    void deleteDirectory(const std::string& path, bool recursive = false);
+    void deleteDirectory(const std::string& path, bool recursive = true);
 
     std::vector<std::string> listDirectory(const std::string& path) const;
     const FileEntry* getMetadata(const std::string& path) const;
@@ -69,8 +69,6 @@ public:
     void openFile(const std::string& path) const;
 
     void moveFile(const std::string& sourcePath, const std::string& destinationPath);
-    void moveDirectory(const std::string& sourcePath, const std::string& destinationPath);
-    void renamePath(const std::string& sourcePath, const std::string& newName);
 
     void save(std::ofstream& outFile) const; // Save file system state
     void load(std::ifstream& inFile);        // Load file system state

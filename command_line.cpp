@@ -33,9 +33,7 @@ void startCLI(FileManager& fileManager) {
                 std::cout << "  write_file [path] [data] [append]" << std::endl;
                 std::cout << "  read_file [path]" << std::endl;
                 std::cout << "  list_dir [path]" << std::endl;
-                std::cout << "  move_file [source] [destination]  - Move or rename a file" << std::endl;
-                std::cout << "  move_dir [source] [destination]   - Move or rename a directory" << std::endl;
-                std::cout << "  rename [source] [new_name]        - Rename a file or directory" << std::endl;
+                std::cout << "  move_file [source] [destination]  - Move or rename a file." << std::endl;
                 std::cout << "  exit" << std::endl;
             } else if (command == "create_file") {
                 std::string path, sizeStr;
@@ -43,9 +41,12 @@ void startCLI(FileManager& fileManager) {
                 iss >> path >> sizeStr;
 
                 // Check if the path or size is empty
-                if (path.empty() || sizeStr.empty()) {
+                if (path.empty()) {
                     std::cerr << "Error: Invalid command. Usage: create_file [path] [size]." << std::endl;
                     continue;
+                } else if (sizeStr.empty()) {
+                    sizeStr = "100";
+                    std::cout << "Default file size is 100." << std::endl;
                 } else if (sizeStr[0] == '-') { // Check if the size is valid
                     std::cerr << "Error: File size must be a positive number." << std::endl;
                     continue;
@@ -85,9 +86,9 @@ void startCLI(FileManager& fileManager) {
             } else if (command == "delete_dir") {
                 std::string path;
                 std::string recursiveStr;
-                bool recursive = false;
+                bool recursive = true;
                 iss >> path >> recursiveStr;
-                if (recursiveStr == "true") recursive = true;
+                if (recursiveStr == "false") recursive = false;
                 fileManager.deleteDirectory(path, recursive);
                 //std::cout << "Directory deleted at " << path << std::endl;
             } else if (command == "write_file") {
@@ -95,21 +96,21 @@ void startCLI(FileManager& fileManager) {
                 bool append = true;
                 iss >> path;
 
-                // 🔥 Read the entire remaining line as data
+                //  Read the entire remaining line as data
                 std::getline(iss, data);
 
-                // 🔥 Remove leading and trailing whitespace
+                //  Remove leading and trailing whitespace
                 data.erase(0, data.find_first_not_of(" \t"));
                 data.erase(data.find_last_not_of(" \t") + 1);
 
-                // 🔥 Extract the quoted string if present
+                //  Extract the quoted string if present
                 std::smatch match;
                 std::regex quotedRegex(R"delim("([^"]*)")delim");
                 if (std::regex_search(data, match, quotedRegex)) {
                     data = match[1].str(); // Extract the content inside the quotes
                 }
 
-                // 🔥 Extract possible append flag
+                //  Extract possible append flag
 
                 size_t spacePos = data.find_last_of(' '); 
                 if (spacePos != std::string::npos) {
@@ -120,7 +121,7 @@ void startCLI(FileManager& fileManager) {
                     }
                 }
 
-                // 🔥 Remove leading and trailing whitespace again to clean up
+                //  Remove leading and trailing whitespace again to clean up
                 data.erase(0, data.find_first_not_of(" \t"));
                 data.erase(data.find_last_not_of(" \t") + 1);
 
@@ -134,6 +135,9 @@ void startCLI(FileManager& fileManager) {
             } else if (command == "list_dir") {
                 std::string path;
                 iss >> path;
+                if (path.empty()) {
+                    path = "/";
+                }
                 auto contents = fileManager.listDirectory(path);
                 std::cout << "Contents of " << path << ":" << std::endl;
                 for (const auto& entry : contents) {
@@ -149,27 +153,6 @@ void startCLI(FileManager& fileManager) {
                     fileManager.moveFile(source, destination);
                     //std::cout << "File moved from " << source << " to " << destination << std::endl;
                 }
-            } else if (command == "move_dir") {
-                std::string source, destination;
-                iss >> source >> destination;
-
-                if (source.empty() || destination.empty()) {
-                    std::cout << "Usage: move_dir [source] [destination]" << std::endl;
-                } else {
-                    fileManager.moveDirectory(source, destination);
-                    //std::cout << "Directory moved from " << source << " to " << destination << std::endl;
-                }
-            
-            } else if (command == "rename") {
-                std::string source, newName;
-                iss >> source >> newName;
-
-                if (source.empty() || newName.empty()) {
-                    std::cout << "Usage: rename [source] [new_name]" << std::endl;
-                } else {
-                    fileManager.renamePath(source, newName);
-                    //std::cout << "Renamed " << source << " to " << newName << std::endl;
-                }
             } else if (command == "exit") {
                 std::cout << "Exiting CLI. Goodbye!" << std::endl;
                 break;
@@ -184,30 +167,30 @@ void startCLI(FileManager& fileManager) {
 
 
 #ifndef TEST_BUILD
-int main() {
+/*int main() {
     const std::string diskName = "cli_disk.dat";
     const std::string fileSystemDataFile = "filesystem.dat";
 
     DiskManager diskManager(diskName, 256);
     FileManager fileManager(diskManager);
 
-    // 🔥 Load existing file system metadata
+    //  Load existing file system metadata
     std::ifstream fsFile(fileSystemDataFile, std::ios::binary);
     if (fsFile) {
         fileManager.load(fsFile);
         fsFile.close();
     }
     
-    // 🔥 Initialize the file system
+    //  Initialize the file system
     fileManager.initializeFileSystem();
 
     startCLI(fileManager);
 
-    // 🔥 Save file system metadata before exit
+    //  Save file system metadata before exit
     std::ofstream fsOut(fileSystemDataFile, std::ios::binary);
     fileManager.save(fsOut);
     fsOut.close();
 
     return 0;
-}
+}*/
 #endif

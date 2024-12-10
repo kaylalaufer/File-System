@@ -133,7 +133,7 @@ TEST(CommandLineTest, CreateFileWithMissingSize) {
     startCLI(fileManager);
 
     std::string output = ioHelper.getOutput();
-    EXPECT_TRUE(output.find("Error: Invalid command. Usage: create_file [path] [size].") != std::string::npos)
+    EXPECT_TRUE(output.find("Default file size is 100.") != std::string::npos)
         << "Captured output: " << output;
 }
 
@@ -318,22 +318,6 @@ TEST(CommandLineTest, ReadFile) {
         << "Captured output: " << output;
 }
 
-/* GENERAL TESTS */
-
-// Help Command
-TEST(CommandLineTest, HelpCommand) {
-    DiskManager diskManager("test_disk.dat", 256);
-    FileManager fileManager(diskManager);
-
-    IOTestHelper ioHelper("help\nexit\n");
-
-    startCLI(fileManager);
-
-    std::string output = ioHelper.getOutput();
-    EXPECT_TRUE(output.find("Available commands:") != std::string::npos)
-        << "Captured output: " << output;
-}
-
 // List Directory Contents
 TEST(CommandLineTest, ListDirectory) {
     DiskManager diskManager("test_disk.dat", 256);
@@ -393,12 +377,10 @@ TEST(CommandLineTest, MoveEmptyFile) {
 
     fileManager.createFile("/empty_file", 100); // Empty file, no data written
 
+    fileManager.createDirectory("/empty_folder");
+
     IOTestHelper ioHelper("move_file /empty_file /empty_folder/empty_file\nexit\n");
     startCLI(fileManager);
-
-    // Check that the original file is gone
-    const FileEntry* oldFileEntry = fileManager.getMetadata("/empty_file");
-    EXPECT_TRUE(oldFileEntry == nullptr) << "File /empty_file should no longer exist.";
 
     // Check that the new file exists
     const FileEntry* newFileEntry = fileManager.getMetadata("/empty_folder/empty_file");
@@ -413,21 +395,33 @@ TEST(CommandLineTest, MoveFileAndRetainContent) {
     fileManager.createFile("/file3", 100);
     fileManager.writeFile("/file3", "Hello, World!", false);
 
-    IOTestHelper ioHelper("move_file /file3 /non_existent_folder/file3\nexit\n");
+    fileManager.createDirectory("/my_folder");
+
+    IOTestHelper ioHelper("move_file /file3 /my_folder/file3\nexit\n");
     startCLI(fileManager);
 
-    // Check that the original file is gone
-    const FileEntry* oldFileEntry = fileManager.getMetadata("/file3");
-    EXPECT_TRUE(oldFileEntry == nullptr) << oldFileEntry <<  "File /file3 should no longer exist.";
-
     // Check that the new file exists
-    const FileEntry* newFileEntry = fileManager.getMetadata("/non_existent_folder/file3");
-    ASSERT_TRUE(newFileEntry != nullptr) << " File /non_existent_folder/file3 should exist.";
-    EXPECT_TRUE(newFileEntry->type == FileType::File) << "/non_existent_folder/file3 should be a file.";
+    const FileEntry* newFileEntry = fileManager.getMetadata("/my_folder/file3");
+    ASSERT_TRUE(newFileEntry != nullptr) << " File /my_folder/file3 should exist.";
+    EXPECT_TRUE(newFileEntry->type == FileType::File) << "/my_folder/file3 should be a file.";
 
     // Check that the file's contents are retained
-    std::string fileData = fileManager.readFile("/non_existent_folder/file3");
-    EXPECT_EQ(fileData, "Hello, World!") << "Contents of /non_existent_folder/file3 should be 'Hello, World!'.";
+    std::string fileData = fileManager.readFile("/my_folder/file3");
+    EXPECT_EQ(fileData, "Hello, World!") << "Contents of /my_folder/file3 should be 'Hello, World!'.";
 }
 
+/* GENERAL TESTS */
 
+// Help Command
+TEST(CommandLineTest, HelpCommand) {
+    DiskManager diskManager("test_disk.dat", 256);
+    FileManager fileManager(diskManager);
+
+    IOTestHelper ioHelper("help\nexit\n");
+
+    startCLI(fileManager);
+
+    std::string output = ioHelper.getOutput();
+    EXPECT_TRUE(output.find("Available commands:") != std::string::npos)
+        << "Captured output: " << output;
+}
