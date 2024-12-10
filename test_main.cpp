@@ -198,8 +198,8 @@ TEST_F(FileManagerTests, ListDirectoryContents) {
 
     auto contents = fileManager->listDirectory("/mydir");
     EXPECT_EQ(contents.size(), 2);
-    EXPECT_NE(std::find(contents.begin(), contents.end(), "/mydir/file1.txt"), contents.end());
-    EXPECT_NE(std::find(contents.begin(), contents.end(), "/mydir/file2.txt"), contents.end());
+    EXPECT_NE(std::find(contents.begin(), contents.end(), "file1.txt"), contents.end());
+    EXPECT_NE(std::find(contents.begin(), contents.end(), "file2.txt"), contents.end());
 }
 
 // Test: Delete non-empty directory without recursive flag

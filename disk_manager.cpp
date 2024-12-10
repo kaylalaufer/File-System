@@ -31,7 +31,6 @@ DiskManager::DiskManager(const std::string& diskName, size_t numBlocks)
     
     if (!diskFile) {
         // 🔥 If the disk file doesn't exist, create it
-        std::cout << "Creating new disk: " << diskName << std::endl;
         diskFile.clear();
         diskFile.open(diskName, std::ios::out | std::ios::binary); // Create file
         diskFile.close();
@@ -55,13 +54,11 @@ void DiskManager::writeBlock(size_t blockIndex, const std::string& data) {
     }
 
     if (blockIndex >= numBlocks) {
-        std::cout << "index: " << blockIndex << "num blocks: "<< numBlocks << std::endl;
         throw std::out_of_range("Block index out of range");
     }
 
     // Open disk file
     std::fstream disk(diskName, std::ios::in | std::ios::out | std::ios::binary);
-    // std::cout << " Name: " << diskName << std::endl;
     if (!disk) {
         throw std::runtime_error("Failed to open disk file for writing");
     }
@@ -87,7 +84,6 @@ std::string DiskManager::readBlock(size_t blockIndex) const {
     }
 
     std::ifstream disk(diskName, std::ios::binary);
-    // std::cout << " Name: " << diskName << std::endl;
     if (!disk) {
         throw std::runtime_error("Failed to open disk file for reading");
     }

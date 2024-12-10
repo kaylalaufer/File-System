@@ -51,16 +51,24 @@ class FileManager {
 public:
     explicit FileManager(DiskManager& diskManager);
 
+    void initializeFileSystem();
+
     void createFile(const std::string& path, size_t size);
     void createDirectory(const std::string& path);
     void ensureParentDirectories(const std::string& path);
+
     void deleteFile(const std::string& path);
-    void deleteDirectory(const std::string& path, bool recursive = false);
+    void deleteDirectory(const std::string& path, bool recursive = true);
+
     std::vector<std::string> listDirectory(const std::string& path) const;
     const FileEntry* getMetadata(const std::string& path) const;
+
     void writeFile(const std::string& path, const std::string& data, bool append);
     std::string readFile(const std::string& path) const;
+    
     void openFile(const std::string& path) const;
+
+    void moveFile(const std::string& sourcePath, const std::string& destinationPath);
 
     void save(std::ofstream& outFile) const; // Save file system state
     void load(std::ifstream& inFile);        // Load file system state
